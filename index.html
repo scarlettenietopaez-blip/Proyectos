@@ -37,27 +37,31 @@
         <article class="kpi-card kpi-total">
           <span class="kpi-label">TOTAL DE PROYECTOS</span>
           <strong id="kpiTotal">—</strong>
+          <div class="kpi-money" id="moneyTotal">—</div>
           <div class="kpi-separator"></div>
-          <small>100% del total</small>
+          <small>100% del total de proyectos</small>
         </article>
 
         <article class="kpi-card kpi-pac">
           <span class="kpi-label">PROYECTOS PAC</span>
           <strong id="kpiPac">—</strong>
+          <div class="kpi-money" id="moneyPac">—</div>
           <div class="kpi-separator"></div>
           <small id="pctPac">—</small>
         </article>
 
         <article class="kpi-card kpi-otros">
-          <span class="kpi-label">OTROS PROYECTOS</span>
+          <span class="kpi-label">FUERA DEL PAC</span>
           <strong id="kpiOtros">—</strong>
+          <div class="kpi-money" id="moneyOtros">—</div>
           <div class="kpi-separator"></div>
           <small id="pctOtros">—</small>
         </article>
 
         <article class="kpi-card kpi-oopp">
-          <span class="kpi-label">ENTREGADOS A OOPP</span>
+          <span class="kpi-label">ENTREGADOS PARA CONTRATACIÓN</span>
           <strong id="kpiOopp">—</strong>
+          <div class="kpi-money" id="moneyOopp">—</div>
           <div class="kpi-separator"></div>
           <small id="pctOopp">—</small>
         </article>
@@ -84,13 +88,24 @@
             <canvas id="parishChart"></canvas>
           </div>
         </article>
+
+        <article class="chart-card">
+          <h2>MONTO DE INVERSIÓN POR PARROQUIA</h2>
+          <div class="chart-wrap">
+            <canvas id="parishMoneyChart"></canvas>
+          </div>
+        </article>
       </section>
 
       <section class="projects-box">
         <div class="filters">
           <label>
             <span>Categoría</span>
-            <select id="categoryFilter"><option value="">Todas</option></select>
+            <select id="categoryFilter">
+              <option value="">Todas</option>
+              <option value="PAC">PAC</option>
+              <option value="Otros">Fuera del PAC</option>
+            </select>
           </label>
 
           <label>
@@ -100,7 +115,13 @@
 
           <label>
             <span>Estado</span>
-            <select id="statusFilter"><option value="">Todos</option></select>
+            <select id="statusFilter">
+              <option value="">Todos</option>
+              <option value="En Desarrollo">En Desarrollo</option>
+              <option value="Entregado para Contratación">Entregado para Contratación</option>
+              <option value="Remitido a otra Dirección">Remitido a otra Dirección</option>
+              <option value="No Iniciado">No Iniciado</option>
+            </select>
           </label>
 
           <label class="search-label">

@@ -82,7 +82,7 @@ body{
   background:#fff;
   border:1px solid var(--line);
   border-radius:13px;
-  min-height:165px;
+  min-height:190px;
   box-shadow:var(--shadow);
   padding:23px 28px 18px;
   position:relative;
@@ -135,7 +135,7 @@ body{
 
 .charts-grid{
   display:grid;
-  grid-template-columns:.9fr 1fr 1.1fr;
+  grid-template-columns:1fr 1fr;
   gap:18px;
   margin-bottom:18px;
 }
@@ -358,3 +358,20 @@ footer{
   .page-size{justify-self:center}
   footer{gap:8px;flex-direction:column;justify-content:center;text-align:center;padding:10px 20px}
 }
+
+.kpi-money{
+  font-size:17px;
+  line-height:1.2;
+  font-weight:800;
+  color:#263a61;
+  margin-bottom:12px;
+  font-variant-numeric:tabular-nums;
+}
+.kpi-pac .kpi-money{color:#175bbd}
+.kpi-otros .kpi-money{color:#c9262b}
+.kpi-oopp .kpi-money{color:#08793e}
+
+.status-pill[data-status="Entregado para Contratación"]{background:#078744}
+.status-pill[data-status="En Desarrollo"]{background:#0d2a5b}
+.status-pill[data-status="Remitido a otra Dirección"]{background:#2a67c7}
+.status-pill[data-status="No Iniciado"]{background:#7f1d1d}

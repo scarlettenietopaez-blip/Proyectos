@@ -1,423 +1,140 @@
 const $ = s => document.querySelector(s);
+const COLORS={navy:"#0d2a5b",blue:"#1e63d5",red:"#ef2b31",green:"#07964d"};
+let projects=[],currentPage=1,pageSize=10;
+let categoryChart,statusChart,parishChart,parishMoneyChart;
 
-const COLORS = {
-  navy:"#0d2a5b",
-  blue:"#1e63d5",
-  red:"#ef2b31",
-  green:"#07964d"
-};
-
-let projects = [];
-let currentPage = 1;
-let pageSize = 10;
-let categoryChart, statusChart, parishChart;
-
-const els = {
-  total:$("#kpiTotal"),
-  pac:$("#kpiPac"),
-  otros:$("#kpiOtros"),
-  oopp:$("#kpiOopp"),
-  pctPac:$("#pctPac"),
-  pctOtros:$("#pctOtros"),
-  pctOopp:$("#pctOopp"),
-  body:$("#projectsBody"),
-  category:$("#categoryFilter"),
-  parish:$("#parishFilter"),
-  status:$("#statusFilter"),
-  search:$("#search"),
-  clear:$("#clearFilters"),
-  pageSize:$("#pageSize"),
-  pagination:$("#pagination"),
-  range:$("#rangeLabel"),
-  modal:$("#modal"),
-  modalContent:$("#modalContent"),
-  modalClose:$("#modalClose")
+const els={
+ total:$("#kpiTotal"),pac:$("#kpiPac"),otros:$("#kpiOtros"),oopp:$("#kpiOopp"),
+ moneyTotal:$("#moneyTotal"),moneyPac:$("#moneyPac"),moneyOtros:$("#moneyOtros"),moneyOopp:$("#moneyOopp"),
+ pctPac:$("#pctPac"),pctOtros:$("#pctOtros"),pctOopp:$("#pctOopp"),
+ body:$("#projectsBody"),category:$("#categoryFilter"),parish:$("#parishFilter"),status:$("#statusFilter"),
+ search:$("#search"),clear:$("#clearFilters"),pageSize:$("#pageSize"),pagination:$("#pagination"),
+ range:$("#rangeLabel"),modal:$("#modal"),modalContent:$("#modalContent"),modalClose:$("#modalClose")
 };
 
 function parseCSV(text){
-  const rows=[];
-  let row=[], field="", quoted=false;
-
-  for(let i=0;i<text.length;i++){
-    const c=text[i], n=text[i+1];
-
-    if(c === '"'){
-      if(quoted && n === '"'){ field+='"'; i++; }
-      else quoted=!quoted;
-    } else if(c === "," && !quoted){
-      row.push(field); field="";
-    } else if((c === "\n" || c === "\r") && !quoted){
-      if(c === "\r" && n === "\n") i++;
-      row.push(field); field="";
-      if(row.some(v => v !== "")) rows.push(row);
-      row=[];
-    } else {
-      field+=c;
-    }
-  }
-
-  if(field || row.length){ row.push(field); rows.push(row); }
-
-  const headers=rows.shift().map((h,i)=>i===0?h.replace(/^\uFEFF/,""):h);
-  return rows.map(r=>Object.fromEntries(headers.map((h,i)=>[h,r[i] ?? ""])));
+ const rows=[];let row=[],field="",quoted=false;
+ for(let i=0;i<text.length;i++){
+  const c=text[i],n=text[i+1];
+  if(c==='"'){if(quoted&&n==='"'){field+='"';i++;}else quoted=!quoted;}
+  else if(c===","&&!quoted){row.push(field);field="";}
+  else if((c==="\n"||c==="\r")&&!quoted){
+   if(c==="\r"&&n==="\n")i++;
+   row.push(field);field="";
+   if(row.some(v=>v!==""))rows.push(row);
+   row=[];
+  } else field+=c;
+ }
+ if(field||row.length){row.push(field);rows.push(row);}
+ const headers=rows.shift().map((h,i)=>i===0?h.replace(/^\uFEFF/,""):h);
+ return rows.map(r=>Object.fromEntries(headers.map((h,i)=>[h,r[i]??""])));
 }
+function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));}
+function amount(p){const n=Number(p.monto_num);return Number.isFinite(n)?n:0;}
+function moneyValue(n){return new Intl.NumberFormat("es-EC",{style:"currency",currency:"USD",minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);}
+function moneyCell(p){return amount(p)?new Intl.NumberFormat("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}).format(amount(p)):(p.monto||"—");}
+function pct(n,total){return total?`${(n/total*100).toFixed(1)}% del total de proyectos`:"—";}
 
-function esc(v){
-  return String(v ?? "").replace(/[&<>"']/g,m=>({
-    "&":"&amp;",
-    "<":"&lt;",
-    ">":"&gt;",
-    '"':"&quot;",
-    "'":"&#39;"
-  }[m]));
+function groupedStatus(p){
+ const s=(p.estado_dashboard||"").trim();
+ if(s==="En desarrollo"||s==="Por entregar")return "En Desarrollo";
+ if(s==="Entregado a OOPP"||s==="Entregado / SERCOP")return "Entregado para Contratación";
+ if(s==="Remitido a otra dirección"||s==="Gestión externa")return "Remitido a otra Dirección";
+ if(s==="No iniciado"||s==="Sin estado registrado")return "No Iniciado";
+ return "En Desarrollo";
 }
-
-function money(p){
-  if(p.monto_num !== "" && p.monto_num != null && !Number.isNaN(Number(p.monto_num))){
-    return new Intl.NumberFormat("en-US",{
-      minimumFractionDigits:2,
-      maximumFractionDigits:2
-    }).format(Number(p.monto_num));
-  }
-  return p.monto || "—";
-}
-
-function pct(n,total){
-  return total ? `${(n/total*100).toFixed(1)}% del total` : "—";
-}
-
-function counts(field){
-  return projects.reduce((a,p)=>{
-    const k=p[field] || "Sin información";
-    a[k]=(a[k]||0)+1;
-    return a;
-  },{});
-}
-
-function unique(field){
-  return [...new Set(projects.map(p=>p[field]).filter(Boolean))]
-    .sort((a,b)=>a.localeCompare(b,"es"));
-}
-
-function fillSelect(el,vals){
-  vals.forEach(v=>{
-    const o=document.createElement("option");
-    o.value=v;
-    o.textContent=v;
-    el.appendChild(o);
-  });
-}
+function displayCategory(v){return v==="Otros"?"Fuera del PAC":v;}
+function unique(field){return [...new Set(projects.map(p=>p[field]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"es"));}
+function fillSelect(el,vals){vals.forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v;el.appendChild(o);});}
 
 function renderKpis(){
-  const total=projects.length;
-  const pac=projects.filter(p=>p.categoria==="PAC").length;
-  const otros=projects.filter(p=>p.categoria==="Otros").length;
-  const oopp=projects.filter(p=>p.estado_dashboard==="Entregado a OOPP").length;
-
-  els.total.textContent=total;
-  els.pac.textContent=pac;
-  els.otros.textContent=otros;
-  els.oopp.textContent=oopp;
-
-  els.pctPac.textContent=pct(pac,total);
-  els.pctOtros.textContent=pct(otros,total);
-  els.pctOopp.textContent=pct(oopp,total);
-}
-
-function chartDefaults(){
-  Chart.defaults.font.family='Arial, "Helvetica Neue", sans-serif';
-  Chart.defaults.color="#344054";
-  Chart.defaults.font.size=10;
+ const total=projects.length;
+ const pac=projects.filter(p=>p.categoria==="PAC");
+ const fuera=projects.filter(p=>p.categoria==="Otros");
+ const entregados=projects.filter(p=>groupedStatus(p)==="Entregado para Contratación");
+ els.total.textContent=total;els.pac.textContent=pac.length;els.otros.textContent=fuera.length;els.oopp.textContent=entregados.length;
+ els.moneyTotal.textContent=moneyValue(projects.reduce((s,p)=>s+amount(p),0));
+ els.moneyPac.textContent=moneyValue(pac.reduce((s,p)=>s+amount(p),0));
+ els.moneyOtros.textContent=moneyValue(fuera.reduce((s,p)=>s+amount(p),0));
+ els.moneyOopp.textContent=moneyValue(entregados.reduce((s,p)=>s+amount(p),0));
+ els.pctPac.textContent=pct(pac.length,total);els.pctOtros.textContent=pct(fuera.length,total);els.pctOopp.textContent=pct(entregados.length,total);
 }
 
 function renderCharts(){
-  chartDefaults();
+ Chart.defaults.font.family='Arial, "Helvetica Neue", sans-serif';Chart.defaults.color="#344054";Chart.defaults.font.size=10;
+ const pac=projects.filter(p=>p.categoria==="PAC").length,fuera=projects.filter(p=>p.categoria==="Otros").length;
+ categoryChart?.destroy();
+ categoryChart=new Chart($("#categoryChart"),{type:"doughnut",data:{labels:["PAC","Fuera del PAC"],datasets:[{data:[pac,fuera],backgroundColor:[COLORS.blue,COLORS.red],borderColor:"#fff",borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,cutout:"52%",plugins:{legend:{position:"right",labels:{boxWidth:12,padding:18}},tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw} (${(c.raw/projects.length*100).toFixed(1)}%)`}}}}});
 
-  const cat=counts("categoria");
-  categoryChart?.destroy();
-  categoryChart=new Chart($("#categoryChart"),{
-    type:"doughnut",
-    data:{
-      labels:["PAC","Otros"],
-      datasets:[{
-        data:[cat.PAC||0,cat.Otros||0],
-        backgroundColor:[COLORS.blue,COLORS.red],
-        borderColor:"#fff",
-        borderWidth:2
-      }]
-    },
-    options:{
-      responsive:true,
-      maintainAspectRatio:false,
-      cutout:"52%",
-      plugins:{
-        legend:{
-          position:"right",
-          labels:{boxWidth:12,padding:18}
-        },
-        tooltip:{
-          callbacks:{
-            label:c=>`${c.label}: ${c.raw} (${(c.raw/projects.length*100).toFixed(1)}%)`
-          }
-        }
-      }
-    }
-  });
+ const order=["En Desarrollo","Entregado para Contratación","Remitido a otra Dirección","No Iniciado"];
+ const sc=Object.fromEntries(order.map(s=>[s,0]));projects.forEach(p=>sc[groupedStatus(p)]++);
+ statusChart?.destroy();
+ statusChart=new Chart($("#statusChart"),{type:"bar",data:{labels:order,datasets:[{data:order.map(k=>sc[k]),backgroundColor:[COLORS.navy,COLORS.green,COLORS.blue,COLORS.red],borderRadius:2,barThickness:18}]},options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,grid:{color:"#edf1f6"},ticks:{stepSize:5}},y:{grid:{display:false}}}}});
 
-  const stateCounts=counts("estado_dashboard");
-  const order=[
-    "En desarrollo",
-    "Entregado a OOPP",
-    "Remitido a otra dirección",
-    "Por entregar",
-    "Entregado / SERCOP",
-    "Gestión externa",
-    "No iniciado",
-    "Sin estado registrado"
-  ];
-  const stateLabels=order.filter(k=>stateCounts[k]);
+ const pc={};projects.forEach(p=>{const k=p.parroquia||"Sin información";pc[k]=(pc[k]||0)+1;});
+ const pe=Object.entries(pc).sort((a,b)=>b[1]-a[1]);
+ parishChart?.destroy();
+ parishChart=new Chart($("#parishChart"),{type:"bar",data:{labels:pe.map(x=>x[0]),datasets:[{data:pe.map(x=>x[1]),backgroundColor:COLORS.navy,borderRadius:1,barPercentage:.62}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:"#edf1f6"},ticks:{stepSize:1,precision:0}},x:{grid:{display:false},ticks:{maxRotation:0,minRotation:0}}}}});
 
-  statusChart?.destroy();
-  statusChart=new Chart($("#statusChart"),{
-    type:"bar",
-    data:{
-      labels:stateLabels,
-      datasets:[{
-        data:stateLabels.map(k=>stateCounts[k]),
-        backgroundColor:stateLabels.map(k=>{
-          if(k==="Entregado a OOPP") return COLORS.green;
-          if(k==="Por entregar" || k==="Gestión externa" || k==="Sin estado registrado") return COLORS.red;
-          return COLORS.navy;
-        }),
-        borderRadius:2,
-        barThickness:10
-      }]
-    },
-    options:{
-      indexAxis:"y",
-      responsive:true,
-      maintainAspectRatio:false,
-      plugins:{legend:{display:false}},
-      scales:{
-        x:{
-          beginAtZero:true,
-          grid:{color:"#edf1f6"},
-          ticks:{stepSize:5}
-        },
-        y:{grid:{display:false}}
-      }
-    }
-  });
-
-  const parishCounts=counts("parroquia");
-  const parishEntries=Object.entries(parishCounts).sort((a,b)=>b[1]-a[1]);
-
-  parishChart?.destroy();
-  parishChart=new Chart($("#parishChart"),{
-    type:"bar",
-    data:{
-      labels:parishEntries.map(x=>x[0]),
-      datasets:[{
-        data:parishEntries.map(x=>x[1]),
-        backgroundColor:COLORS.navy,
-        borderRadius:1,
-        barPercentage:.62
-      }]
-    },
-    options:{
-      responsive:true,
-      maintainAspectRatio:false,
-      plugins:{legend:{display:false}},
-      scales:{
-        y:{
-          beginAtZero:true,
-          grid:{color:"#edf1f6"},
-          ticks:{stepSize:3}
-        },
-        x:{
-          grid:{display:false},
-          ticks:{maxRotation:0,minRotation:0}
-        }
-      }
-    }
-  });
+ const pm={};projects.forEach(p=>{const k=p.parroquia||"Sin información";pm[k]=(pm[k]||0)+amount(p);});
+ const pme=Object.entries(pm).sort((a,b)=>b[1]-a[1]);
+ parishMoneyChart?.destroy();
+ parishMoneyChart=new Chart($("#parishMoneyChart"),{type:"bar",data:{labels:pme.map(x=>x[0]),datasets:[{data:pme.map(x=>x[1]),backgroundColor:COLORS.green,borderRadius:1,barPercentage:.62}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>moneyValue(c.raw)}}},scales:{y:{beginAtZero:true,grid:{color:"#edf1f6"},ticks:{callback:v=>new Intl.NumberFormat("es-EC",{notation:"compact",maximumFractionDigits:1}).format(v)}},x:{grid:{display:false},ticks:{maxRotation:0,minRotation:0}}}}});
 }
 
 function filtered(){
-  const q=els.search.value.trim().toLocaleLowerCase("es");
-
-  return projects.filter(p=>{
-    const hay=[
-      p.proyecto,
-      p.parroquia,
-      p.estado_original,
-      p.responsables
-    ].join(" ").toLocaleLowerCase("es");
-
-    return (!q || hay.includes(q)) &&
-      (!els.category.value || p.categoria===els.category.value) &&
-      (!els.parish.value || p.parroquia===els.parish.value) &&
-      (!els.status.value || p.estado_dashboard===els.status.value);
-  });
+ const q=els.search.value.trim().toLocaleLowerCase("es");
+ return projects.filter(p=>{
+  const hay=[p.proyecto,p.parroquia,p.estado_original,p.responsables].join(" ").toLocaleLowerCase("es");
+  return(!q||hay.includes(q))&&(!els.category.value||p.categoria===els.category.value)&&(!els.parish.value||p.parroquia===els.parish.value)&&(!els.status.value||groupedStatus(p)===els.status.value);
+ });
 }
-
 function renderTable(){
-  const list=filtered();
-  const totalPages=Math.max(1,Math.ceil(list.length/pageSize));
-
-  if(currentPage>totalPages) currentPage=totalPages;
-
-  const start=(currentPage-1)*pageSize;
-  const end=Math.min(start+pageSize,list.length);
-  const page=list.slice(start,end);
-
-  els.range.textContent=list.length
-    ? `Mostrando ${start+1} a ${end} de ${list.length} proyectos`
-    : "No hay proyectos para mostrar";
-
-  els.body.innerHTML=page.length ? page.map(p=>`
-    <tr>
-      <td>${String(p.item).padStart(2,"0")}</td>
-      <td><div class="project-title">${esc(p.proyecto)}</div></td>
-      <td>${esc(p.parroquia || "—")}</td>
-      <td><span class="tag">${esc(p.categoria)}</span></td>
-      <td>${esc(money(p))}</td>
-      <td><div class="description-cell">${esc(p.estado_original || "Sin descripción registrada")}</div></td>
-      <td><span class="status-pill" data-status="${esc(p.estado_dashboard)}">${esc(p.estado_dashboard)}</span></td>
-      <td>${esc(p.fecha_entrega || "—")}</td>
-      <td><button class="detail-btn" data-item="${esc(p.item)}">◉ &nbsp;Ver detalle</button></td>
-    </tr>
-  `).join("") : `
-    <tr>
-      <td colspan="9" style="text-align:center;padding:30px;color:#667085">
-        No existen proyectos con los filtros seleccionados.
-      </td>
-    </tr>`;
-
-  els.body.querySelectorAll("[data-item]").forEach(btn=>{
-    btn.addEventListener("click",()=>openModal(btn.dataset.item));
-  });
-
-  renderPagination(totalPages);
+ const list=filtered(),totalPages=Math.max(1,Math.ceil(list.length/pageSize));
+ if(currentPage>totalPages)currentPage=totalPages;
+ const start=(currentPage-1)*pageSize,end=Math.min(start+pageSize,list.length),page=list.slice(start,end);
+ els.range.textContent=list.length?`Mostrando ${start+1} a ${end} de ${list.length} proyectos`:"No hay proyectos para mostrar";
+ els.body.innerHTML=page.length?page.map(p=>`<tr>
+ <td>${String(p.item).padStart(2,"0")}</td>
+ <td><div class="project-title">${esc(p.proyecto)}</div></td>
+ <td>${esc(p.parroquia||"—")}</td>
+ <td><span class="tag">${esc(displayCategory(p.categoria))}</span></td>
+ <td>${esc(moneyCell(p))}</td>
+ <td><div class="description-cell">${esc(p.estado_original||"Sin descripción registrada")}</div></td>
+ <td><span class="status-pill" data-status="${esc(groupedStatus(p))}">${esc(groupedStatus(p))}</span></td>
+ <td>${esc(p.fecha_entrega||"—")}</td>
+ <td><button class="detail-btn" data-item="${esc(p.item)}">◉ &nbsp;Ver detalle</button></td>
+ </tr>`).join(""):`<tr><td colspan="9" style="text-align:center;padding:30px;color:#667085">No existen proyectos con los filtros seleccionados.</td></tr>`;
+ els.body.querySelectorAll("[data-item]").forEach(b=>b.addEventListener("click",()=>openModal(b.dataset.item)));
+ renderPagination(totalPages);
 }
-
 function renderPagination(totalPages){
-  const buttons=[];
-  buttons.push(`<button class="page-btn" data-page="${Math.max(1,currentPage-1)}">«</button>`);
-
-  for(let i=1;i<=totalPages;i++){
-    buttons.push(`<button class="page-btn ${i===currentPage?"active":""}" data-page="${i}">${i}</button>`);
-  }
-
-  buttons.push(`<button class="page-btn" data-page="${Math.min(totalPages,currentPage+1)}">»</button>`);
-  els.pagination.innerHTML=buttons.join("");
-
-  els.pagination.querySelectorAll("[data-page]").forEach(btn=>{
-    btn.addEventListener("click",()=>{
-      currentPage=Number(btn.dataset.page);
-      renderTable();
-    });
-  });
+ const buttons=[`<button class="page-btn" data-page="${Math.max(1,currentPage-1)}">«</button>`];
+ for(let i=1;i<=totalPages;i++)buttons.push(`<button class="page-btn ${i===currentPage?"active":""}" data-page="${i}">${i}</button>`);
+ buttons.push(`<button class="page-btn" data-page="${Math.min(totalPages,currentPage+1)}">»</button>`);els.pagination.innerHTML=buttons.join("");
+ els.pagination.querySelectorAll("[data-page]").forEach(b=>b.addEventListener("click",()=>{currentPage=Number(b.dataset.page);renderTable();}));
 }
-
-function detail(label,value,full=false){
-  return `<div class="detail ${full?"full":""}">
-    <span>${esc(label)}</span>
-    <strong>${esc(value || "Sin información registrada")}</strong>
-  </div>`;
-}
-
+function detail(label,value,full=false){return `<div class="detail ${full?"full":""}"><span>${esc(label)}</span><strong>${esc(value||"Sin información registrada")}</strong></div>`;}
 function openModal(item){
-  const p=projects.find(x=>String(x.item)===String(item));
-  if(!p) return;
-
-  els.modalContent.innerHTML=`
-    <p class="modal-kicker">Proyecto ${esc(p.item)} · ${esc(p.categoria)}</p>
-    <h3 id="modalTitle">${esc(p.proyecto)}</h3>
-    <div class="detail-grid">
-      ${detail("Parroquia",p.parroquia)}
-      ${detail("Monto",money(p))}
-      ${detail("Número de trámite",p.tramite)}
-      ${detail("Situación",p.estado_dashboard)}
-      ${detail("Fecha prevista / entrega",p.fecha_entrega)}
-      ${detail("Responsables",p.responsables,true)}
-      ${detail("Descripción / estado registrado",p.estado_original,true)}
-    </div>
-  `;
-
-  els.modal.classList.add("open");
-  els.modal.setAttribute("aria-hidden","false");
-  document.body.style.overflow="hidden";
+ const p=projects.find(x=>String(x.item)===String(item));if(!p)return;
+ els.modalContent.innerHTML=`<p class="modal-kicker">Proyecto ${esc(p.item)} · ${esc(displayCategory(p.categoria))}</p><h3 id="modalTitle">${esc(p.proyecto)}</h3><div class="detail-grid">
+ ${detail("Parroquia",p.parroquia)}${detail("Monto",moneyValue(amount(p)))}${detail("Número de trámite",p.tramite)}${detail("Estado agrupado",groupedStatus(p))}
+ ${detail("Fecha prevista / entrega",p.fecha_entrega)}${detail("Responsables",p.responsables,true)}${detail("Descripción / estado registrado",p.estado_original,true)}
+ </div>`;els.modal.classList.add("open");els.modal.setAttribute("aria-hidden","false");document.body.style.overflow="hidden";
 }
-
-function closeModal(){
-  els.modal.classList.remove("open");
-  els.modal.setAttribute("aria-hidden","true");
-  document.body.style.overflow="";
-}
-
-function resetPageAndRender(){
-  currentPage=1;
-  renderTable();
-}
-
+function closeModal(){els.modal.classList.remove("open");els.modal.setAttribute("aria-hidden","true");document.body.style.overflow="";}
+function resetPageAndRender(){currentPage=1;renderTable();}
 function bind(){
-  [els.category,els.parish,els.status].forEach(el=>{
-    el.addEventListener("change",resetPageAndRender);
-  });
-
-  els.search.addEventListener("input",resetPageAndRender);
-
-  els.clear.addEventListener("click",()=>{
-    els.search.value="";
-    els.category.value="";
-    els.parish.value="";
-    els.status.value="";
-    currentPage=1;
-    renderTable();
-  });
-
-  els.pageSize.addEventListener("change",()=>{
-    pageSize=els.pageSize.value==="37" ? 37 : Number(els.pageSize.value);
-    currentPage=1;
-    renderTable();
-  });
-
-  els.modalClose.addEventListener("click",closeModal);
-  els.modal.addEventListener("click",e=>{
-    if(e.target.dataset.close) closeModal();
-  });
-
-  document.addEventListener("keydown",e=>{
-    if(e.key==="Escape") closeModal();
-  });
+ [els.category,els.parish,els.status].forEach(el=>el.addEventListener("change",resetPageAndRender));
+ els.search.addEventListener("input",resetPageAndRender);
+ els.clear.addEventListener("click",()=>{els.search.value="";els.category.value="";els.parish.value="";els.status.value="";currentPage=1;renderTable();});
+ els.pageSize.addEventListener("change",()=>{pageSize=els.pageSize.value==="37"?37:Number(els.pageSize.value);currentPage=1;renderTable();});
+ els.modalClose.addEventListener("click",closeModal);els.modal.addEventListener("click",e=>{if(e.target.dataset.close)closeModal();});
+ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal();});
 }
-
 async function init(){
-  const res=await fetch("./data/proyectos.csv",{cache:"no-store"});
-  if(!res.ok) throw new Error("No se pudo cargar data/proyectos.csv");
-
-  projects=parseCSV(await res.text()).map(p=>({
-    ...p,
-    item:Number(p.item)
-  }));
-
-  fillSelect(els.category,unique("categoria"));
-  fillSelect(els.parish,unique("parroquia"));
-  fillSelect(els.status,unique("estado_dashboard"));
-
-  renderKpis();
-  renderCharts();
-  renderTable();
-  bind();
+ const res=await fetch("./data/proyectos.csv",{cache:"no-store"});if(!res.ok)throw new Error("No se pudo cargar data/proyectos.csv");
+ projects=parseCSV(await res.text()).map(p=>({...p,item:Number(p.item)}));
+ fillSelect(els.parish,unique("parroquia"));renderKpis();renderCharts();renderTable();bind();
 }
-
-init().catch(err=>{
-  console.error(err);
-  els.body.innerHTML=`
-    <tr>
-      <td colspan="9" style="padding:30px;text-align:center">
-        No se pudo cargar la información.
-      </td>
-    </tr>`;
-});
+init().catch(err=>{console.error(err);els.body.innerHTML=`<tr><td colspan="9" style="padding:30px;text-align:center">No se pudo cargar la información.</td></tr>`;});
