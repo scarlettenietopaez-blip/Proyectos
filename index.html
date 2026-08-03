@@ -6,183 +6,476 @@
   <meta name="theme-color" content="#0d2a5b">
   <title>Seguimiento de Proyectos | GADM Riobamba</title>
   <link rel="icon" type="image/png" href="./assets/favicon.png">
-  <link rel="stylesheet" href="./styles.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <style>
+    :root{
+      --navy:#0d2a5b; --navy2:#123b78; --blue:#1e63d5; --red:#ef2b31; --green:#07964d;
+      --yellow:#f2b134; --purple:#8d2f88; --cyan:#28a9df; --orange:#e96c1a;
+      --bg:#f5f7fa; --panel:#fff; --line:#dde3ec; --text:#13213d; --muted:#667085;
+      --shadow:0 7px 24px rgba(13,42,91,.08);
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,"Helvetica Neue",sans-serif}
+    .app-shell{min-height:100vh}
+    .top-header{
+      height:120px;background:linear-gradient(120deg,#08234f,#0e326a);color:#fff;
+      display:flex;align-items:center;justify-content:space-between;padding:0 34px;position:relative
+    }
+    .top-header:after{
+      content:"";position:absolute;right:0;bottom:0;width:355px;height:6px;
+      background:linear-gradient(90deg,#ef2b31 0 20%,#07964d 20% 40%,#1e63d5 40% 60%,#28a9df 60% 78%,#f2b134 78% 90%,#8d2f88 90%)
+    }
+    .top-brand{display:flex;align-items:center;gap:30px;min-width:0}
+    .header-logo{width:355px;max-width:39vw;max-height:82px;object-fit:contain;object-position:left center}
+    .header-divider{width:1px;height:56px;background:rgba(255,255,255,.48)}
+    .header-title h1{font-size:31px;line-height:1;margin:0 0 9px;white-space:nowrap}
+    .header-title p{margin:0;font-size:14px;color:#e7edf7}
+    .report-date{display:flex;align-items:center;gap:13px;padding-left:28px;border-left:1px solid rgba(255,255,255,.45);min-width:220px}
+    .report-date svg{width:29px;height:29px;fill:none;stroke:#fff;stroke-width:1.5}
+    .report-date span,.report-date strong{display:block}
+    .report-date span{font-size:12px;color:#d7dfed}.report-date strong{font-size:14px;margin-top:4px}
+    .main-content{width:100%;padding:25px 30px 18px}
+
+    .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;margin-bottom:20px}
+    .kpi-card{
+      background:#fff;border:1px solid var(--line);border-radius:13px;min-height:190px;box-shadow:var(--shadow);
+      padding:23px 28px 18px;position:relative;overflow:hidden;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;text-align:center
+    }
+    .kpi-card:before{content:"";position:absolute;left:0;right:0;top:0;height:5px;background:var(--navy)}
+    .kpi-pac:before{background:var(--blue)}.kpi-otros:before{background:var(--red)}.kpi-oopp:before{background:var(--green)}
+    .kpi-label{font-size:13px;font-weight:800;color:var(--navy)}
+    .kpi-pac .kpi-label,.kpi-pac strong{color:var(--blue)}
+    .kpi-otros .kpi-label,.kpi-otros strong{color:var(--red)}
+    .kpi-oopp .kpi-label,.kpi-oopp strong{color:var(--green)}
+    .kpi-card strong{display:block;font-size:48px;line-height:1;color:var(--navy);margin:13px 0 7px}
+    .kpi-money{font-size:17px;line-height:1.2;font-weight:800;color:#263a61;margin-bottom:12px;font-variant-numeric:tabular-nums}
+    .kpi-pac .kpi-money{color:#175bbd}.kpi-otros .kpi-money{color:#c9262b}.kpi-oopp .kpi-money{color:#08793e}
+    .kpi-separator{width:78%;max-width:245px;height:1px;background:#d9e0e9;margin:0 auto 10px}
+    .kpi-card small{font-size:12px;color:#657087}
+
+    /* FILA 1 DE GRÁFICOS: 3 tarjetas */
+    .charts-top{
+      display:grid;
+      grid-template-columns:.92fr 1.02fr 1.55fr;
+      gap:18px;
+      margin-bottom:18px;
+    }
+    .chart-card{
+      background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);
+      padding:17px 20px;min-width:0
+    }
+    .chart-card h2{font-size:13px;margin:0 0 12px;color:#102758}
+    .chart-top-card{height:315px}
+    .chart-wrap{height:255px}
+    .chart-full{height:395px;margin-bottom:18px}
+    .chart-full .chart-wrap{height:330px}
+    .chart-note{
+      margin:-4px 0 10px;color:#667085;font-size:11px
+    }
+
+    .projects-box{background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+    .filters{display:grid;grid-template-columns:1.05fr 1.05fr 1.05fr 1.7fr auto;gap:26px;align-items:end;padding:16px 22px;border-bottom:1px solid #e4e9f2}
+    .filters label{display:grid;gap:7px;font-size:12px;color:#344054;font-weight:600}
+    .filters select,.filters input{height:38px;border:1px solid #cfd8e6;border-radius:6px;background:#fff;padding:0 12px;color:#344054;font:inherit;outline:none}
+    .search-input-wrap{position:relative}.search-input-wrap input{width:100%;padding-left:37px}
+    .search-ico{position:absolute;left:12px;top:8px;font-size:18px;color:#405273}
+    .clear-btn{height:38px;background:#fff;color:#1b58bc;border:1px solid #245fca;border-radius:6px;padding:0 20px;font-weight:700;cursor:pointer}
+    .table-wrap{overflow:auto}
+    table{width:100%;border-collapse:separate;border-spacing:0;min-width:1380px;font-size:11px}
+    thead th{background:linear-gradient(180deg,#12356e,#0d2a5b);color:#fff;padding:11px 10px;text-align:left;font-size:10px;font-weight:700}
+    tbody td{padding:10px;border-right:1px solid #e1e6ef;border-bottom:1px solid #e1e6ef;vertical-align:middle;color:#344054}
+    .project-title{max-width:360px;line-height:1.35;color:#273855;font-weight:600}
+    .description-cell{max-width:440px;min-width:290px;line-height:1.35;color:#445067}
+    .tag{display:inline-flex;padding:5px 13px;border-radius:4px;background:#1f63ce;color:#fff;font-weight:700}
+    .status-pill{display:inline-flex;min-width:112px;justify-content:center;padding:5px 8px;border-radius:4px;background:#0d2a5b;color:#fff;font-weight:700}
+    .status-pill[data-status="Entregado para Contratación"]{background:#078744}
+    .status-pill[data-status="En Desarrollo"]{background:#0d2a5b}
+    .status-pill[data-status="Remitido a otra Dirección"]{background:#2a67c7}
+    .status-pill[data-status="No Iniciado"]{background:#7f1d1d}
+    .detail-btn{border:0;background:transparent;color:#1b58bc;font-weight:700;cursor:pointer;white-space:nowrap}
+    .pagination-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:11px 18px;color:#667085;font-size:10px}
+    .pagination{display:flex;gap:5px;justify-content:center}.page-btn{min-width:31px;height:29px;border:1px solid #d3dbe7;background:#fff;color:#35425a;border-radius:4px;cursor:pointer}
+    .page-btn.active{background:#0d2a5b;color:#fff;border-color:#0d2a5b}.page-size{justify-self:end;display:flex;align-items:center;gap:8px}
+    footer{min-height:42px;background:linear-gradient(90deg,#0d2a5b,#08234f);color:#dce5f4;display:flex;align-items:center;justify-content:space-between;padding:0 30px;font-size:9px}
+
+    /* MODAL */
+    .modal{display:none;position:fixed;inset:0;z-index:100}
+    .modal.open{display:block}
+    .modal-backdrop{position:absolute;inset:0;background:rgba(8,24,52,.68)}
+    .modal-card{position:relative;width:min(760px,calc(100% - 30px));max-height:calc(100vh - 40px);overflow:auto;margin:20px auto;background:#fff;border-radius:12px;padding:25px;box-shadow:0 24px 80px rgba(0,0,0,.35)}
+    .modal-close{position:absolute;right:14px;top:9px;border:0;background:none;font-size:28px;color:#667085;cursor:pointer}
+    .modal-kicker{font-size:11px;color:#ef2b31;font-weight:800;text-transform:uppercase}
+    .modal-card h3{margin:5px 40px 18px 0;color:#0d2a5b}
+    .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .detail{padding:12px;background:#f6f8fb;border-radius:7px}.detail.full{grid-column:1/-1}
+    .detail span{display:block;color:#7b8495;font-size:10px;text-transform:uppercase;margin-bottom:4px}
+    .detail strong{font-size:12px;color:#24324f;white-space:pre-line}
+
+    /* MODAL DE PARROQUIA */
+    .parish-list{margin-top:10px}
+    .parish-summary{
+      display:grid;grid-template-columns:1fr auto;gap:8px 16px;background:#f6f8fb;border-radius:10px;
+      padding:14px 16px;margin-bottom:14px
+    }
+    .parish-summary strong{color:var(--navy);font-size:16px}
+    .project-invest-row{
+      display:grid;grid-template-columns:1fr auto;gap:18px;padding:13px 0;border-bottom:1px solid #e5e9f0;align-items:start
+    }
+    .project-invest-row:last-child{border-bottom:0}
+    .project-invest-name{font-size:12px;color:#263650;line-height:1.35}
+    .project-invest-amount{font-weight:800;color:#08793e;white-space:nowrap;font-size:12px}
+
+    @media(max-width:1180px){
+      .top-header{padding:0 20px}.header-logo{width:300px}
+      .kpi-grid{grid-template-columns:1fr 1fr}
+      .charts-top{grid-template-columns:1fr 1fr}.charts-top .chart-card:last-child{grid-column:1/-1}
+      .filters{grid-template-columns:1fr 1fr}.search-label{grid-column:1/-1}.clear-btn{justify-self:start}
+    }
+    @media(max-width:760px){
+      .top-header{height:auto;min-height:175px;align-items:flex-start;flex-direction:column;padding:20px}
+      .top-brand{gap:14px;width:100%}.header-logo{width:250px;max-width:70vw}.header-divider{display:none}
+      .header-title h1{font-size:23px;white-space:normal}.report-date{border-left:0;padding-left:0;padding-bottom:17px}
+      .main-content{padding:14px}.kpi-grid,.charts-top{grid-template-columns:1fr}.charts-top .chart-card:last-child{grid-column:auto}
+      .filters{grid-template-columns:1fr;gap:12px}.search-label{grid-column:auto}
+      .pagination-row{grid-template-columns:1fr;gap:10px;text-align:center}.page-size{justify-self:center}
+      footer{gap:8px;flex-direction:column;justify-content:center;text-align:center;padding:10px 20px}
+    }
+  </style>
 </head>
 <body>
-  <div class="app-shell">
-    <header class="top-header">
-      <div class="top-brand">
-        <img src="./assets/logo-riobamba-negativo.png" alt="Riobamba - Alcaldía de la Gente" class="header-logo">
-        <div class="header-divider"></div>
-        <div class="header-title">
-          <h1>Seguimiento de Proyectos</h1>
-          <p>Jefatura de Diseño de la Obra Pública</p>
-        </div>
+<div class="app-shell">
+  <header class="top-header">
+    <div class="top-brand">
+      <img src="./assets/logo-riobamba-negativo.png" alt="Riobamba - Alcaldía de la Gente" class="header-logo">
+      <div class="header-divider"></div>
+      <div class="header-title">
+        <h1>Seguimiento de Proyectos</h1>
+        <p>Jefatura de Diseño de la Obra Pública</p>
+      </div>
+    </div>
+    <div class="report-date">
+      <svg viewBox="0 0 24 24"><path d="M7 2v3M17 2v3M3.5 9h17M5 4.5h14a1.5 1.5 0 0 1 1.5 1.5v14A1.5 1.5 0 0 1 19 21.5H5A1.5 1.5 0 0 1 3.5 20V6A1.5 1.5 0 0 1 5 4.5Z"/></svg>
+      <div><span>Corte de información:</span><strong>Agosto 2026</strong></div>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <section class="kpi-grid">
+      <article class="kpi-card kpi-total">
+        <span class="kpi-label">TOTAL DE PROYECTOS</span><strong id="kpiTotal">—</strong>
+        <div class="kpi-money" id="moneyTotal">—</div><div class="kpi-separator"></div><small>100% del total de proyectos</small>
+      </article>
+      <article class="kpi-card kpi-pac">
+        <span class="kpi-label">PROYECTOS PAC</span><strong id="kpiPac">—</strong>
+        <div class="kpi-money" id="moneyPac">—</div><div class="kpi-separator"></div><small id="pctPac">—</small>
+      </article>
+      <article class="kpi-card kpi-otros">
+        <span class="kpi-label">FUERA DEL PAC</span><strong id="kpiOtros">—</strong>
+        <div class="kpi-money" id="moneyOtros">—</div><div class="kpi-separator"></div><small id="pctOtros">—</small>
+      </article>
+      <article class="kpi-card kpi-oopp">
+        <span class="kpi-label">ENTREGADOS PARA CONTRATACIÓN</span><strong id="kpiOopp">—</strong>
+        <div class="kpi-money" id="moneyOopp">—</div><div class="kpi-separator"></div><small id="pctOopp">—</small>
+      </article>
+    </section>
+
+    <section class="charts-top">
+      <article class="chart-card chart-top-card">
+        <h2>DISTRIBUCIÓN POR CATEGORÍA</h2>
+        <div class="chart-wrap"><canvas id="categoryChart"></canvas></div>
+      </article>
+      <article class="chart-card chart-top-card">
+        <h2>ESTADO GENERAL DE LOS PROYECTOS</h2>
+        <div class="chart-wrap"><canvas id="statusChart"></canvas></div>
+      </article>
+      <article class="chart-card chart-top-card">
+        <h2>PROYECTOS POR PARROQUIA</h2>
+        <div class="chart-wrap"><canvas id="parishChart"></canvas></div>
+      </article>
+    </section>
+
+    <section class="chart-card chart-full">
+      <h2>MONTO DE INVERSIÓN POR PARROQUIA</h2>
+      <p class="chart-note">Haz clic sobre una barra para ver los proyectos que conforman esa parroquia y sus montos individuales.</p>
+      <div class="chart-wrap"><canvas id="parishMoneyChart"></canvas></div>
+    </section>
+
+    <section class="projects-box">
+      <div class="filters">
+        <label><span>Categoría</span><select id="categoryFilter"><option value="">Todas</option><option value="PAC">PAC</option><option value="Otros">Fuera del PAC</option></select></label>
+        <label><span>Parroquia</span><select id="parishFilter"><option value="">Todas</option></select></label>
+        <label><span>Estado</span><select id="statusFilter">
+          <option value="">Todos</option>
+          <option value="En Desarrollo">En Desarrollo</option>
+          <option value="Entregado para Contratación">Entregado para Contratación</option>
+          <option value="Remitido a otra Dirección">Remitido a otra Dirección</option>
+          <option value="No Iniciado">No Iniciado</option>
+        </select></label>
+        <label class="search-label"><span>&nbsp;</span><div class="search-input-wrap"><span class="search-ico">⌕</span><input id="search" type="search" placeholder="Buscar proyecto o parroquia..."></div></label>
+        <button id="clearFilters" class="clear-btn" type="button">↻&nbsp; Limpiar filtros</button>
       </div>
 
-      <div class="report-date">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M7 2v3M17 2v3M3.5 9h17M5 4.5h14a1.5 1.5 0 0 1 1.5 1.5v14A1.5 1.5 0 0 1 19 21.5H5A1.5 1.5 0 0 1 3.5 20V6A1.5 1.5 0 0 1 5 4.5Z"/>
-        </svg>
-        <div>
-          <span>Corte de información:</span>
-          <strong>Agosto 2026</strong>
-        </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>N°</th><th>PROYECTO</th><th>PARROQUIA</th><th>CATEGORÍA</th><th>MONTO (USD)</th>
+            <th>DESCRIPCIÓN</th><th>ESTADO</th><th>FECHA PREVISTA</th><th>ACCIONES</th>
+          </tr></thead>
+          <tbody id="projectsBody"></tbody>
+        </table>
       </div>
-    </header>
+      <div class="pagination-row">
+        <span id="rangeLabel">Mostrando 0 proyectos</span><div id="pagination" class="pagination"></div>
+        <label class="page-size">Mostrar <select id="pageSize"><option value="10">10</option><option value="20">20</option><option value="37">Todos</option></select></label>
+      </div>
+    </section>
+  </main>
 
-    <main class="main-content">
-      <section class="kpi-grid" aria-label="Resumen general">
-        <article class="kpi-card kpi-total">
-          <span class="kpi-label">TOTAL DE PROYECTOS</span>
-          <strong id="kpiTotal">—</strong>
-          <div class="kpi-money" id="moneyTotal">—</div>
-          <div class="kpi-separator"></div>
-          <small>100% del total de proyectos</small>
-        </article>
+  <footer><span>© 2026 Gobierno Autónomo Descentralizado Municipal del cantón Riobamba</span><span>Fuente: Jefatura de Diseño de la Obra Pública</span></footer>
+</div>
 
-        <article class="kpi-card kpi-pac">
-          <span class="kpi-label">PROYECTOS PAC</span>
-          <strong id="kpiPac">—</strong>
-          <div class="kpi-money" id="moneyPac">—</div>
-          <div class="kpi-separator"></div>
-          <small id="pctPac">—</small>
-        </article>
+<div id="modal" class="modal" aria-hidden="true">
+  <div class="modal-backdrop" data-close="true"></div>
+  <article class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <button class="modal-close" id="modalClose" type="button">×</button><div id="modalContent"></div>
+  </article>
+</div>
 
-        <article class="kpi-card kpi-otros">
-          <span class="kpi-label">FUERA DEL PAC</span>
-          <strong id="kpiOtros">—</strong>
-          <div class="kpi-money" id="moneyOtros">—</div>
-          <div class="kpi-separator"></div>
-          <small id="pctOtros">—</small>
-        </article>
+<div id="parishModal" class="modal" aria-hidden="true">
+  <div class="modal-backdrop" data-parish-close="true"></div>
+  <article class="modal-card" role="dialog" aria-modal="true" aria-labelledby="parishModalTitle">
+    <button class="modal-close" id="parishModalClose" type="button">×</button><div id="parishModalContent"></div>
+  </article>
+</div>
 
-        <article class="kpi-card kpi-oopp">
-          <span class="kpi-label">ENTREGADOS PARA CONTRATACIÓN</span>
-          <strong id="kpiOopp">—</strong>
-          <div class="kpi-money" id="moneyOopp">—</div>
-          <div class="kpi-separator"></div>
-          <small id="pctOopp">—</small>
-        </article>
-      </section>
+<script>
+const $=s=>document.querySelector(s);
+const COLORS={navy:"#0d2a5b",blue:"#1e63d5",red:"#ef2b31",green:"#07964d",yellow:"#f2b134",purple:"#8d2f88",cyan:"#28a9df",orange:"#e96c1a"};
+const PALETTE=[COLORS.navy,COLORS.red,COLORS.green,COLORS.yellow,COLORS.purple,COLORS.cyan,COLORS.orange,COLORS.blue,"#6d7789","#9b5de5","#00a8a8","#c97b29"];
 
-      <section class="charts-grid">
-        <article class="chart-card">
-          <h2>DISTRIBUCIÓN POR CATEGORÍA</h2>
-          <div class="chart-wrap doughnut-wrap">
-            <canvas id="categoryChart"></canvas>
-          </div>
-        </article>
+let projects=[],currentPage=1,pageSize=10;
+let categoryChart,statusChart,parishChart,parishMoneyChart;
 
-        <article class="chart-card">
-          <h2>ESTADO GENERAL DE LOS PROYECTOS</h2>
-          <div class="chart-wrap">
-            <canvas id="statusChart"></canvas>
-          </div>
-        </article>
+const els={
+ total:$("#kpiTotal"),pac:$("#kpiPac"),otros:$("#kpiOtros"),oopp:$("#kpiOopp"),
+ moneyTotal:$("#moneyTotal"),moneyPac:$("#moneyPac"),moneyOtros:$("#moneyOtros"),moneyOopp:$("#moneyOopp"),
+ pctPac:$("#pctPac"),pctOtros:$("#pctOtros"),pctOopp:$("#pctOopp"),
+ body:$("#projectsBody"),category:$("#categoryFilter"),parish:$("#parishFilter"),status:$("#statusFilter"),
+ search:$("#search"),clear:$("#clearFilters"),pageSize:$("#pageSize"),pagination:$("#pagination"),range:$("#rangeLabel"),
+ modal:$("#modal"),modalContent:$("#modalContent"),modalClose:$("#modalClose"),
+ parishModal:$("#parishModal"),parishModalContent:$("#parishModalContent"),parishModalClose:$("#parishModalClose")
+};
 
-        <article class="chart-card">
-          <h2>PROYECTOS POR PARROQUIA</h2>
-          <div class="chart-wrap">
-            <canvas id="parishChart"></canvas>
-          </div>
-        </article>
+function parseCSV(text){
+ const rows=[];let row=[],field="",quoted=false;
+ for(let i=0;i<text.length;i++){
+  const c=text[i],n=text[i+1];
+  if(c==='"'){if(quoted&&n==='"'){field+='"';i++;}else quoted=!quoted;}
+  else if(c===","&&!quoted){row.push(field);field="";}
+  else if((c==="\n"||c==="\r")&&!quoted){
+   if(c==="\r"&&n==="\n")i++;
+   row.push(field);field="";
+   if(row.some(v=>v!==""))rows.push(row);
+   row=[];
+  } else field+=c;
+ }
+ if(field||row.length){row.push(field);rows.push(row);}
+ const headers=rows.shift().map((h,i)=>i===0?h.replace(/^\uFEFF/,""):h);
+ return rows.map(r=>Object.fromEntries(headers.map((h,i)=>[h,r[i]??""])));
+}
+function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));}
+function amount(p){const n=Number(p.monto_num);return Number.isFinite(n)?n:0;}
+function moneyValue(n){return new Intl.NumberFormat("es-EC",{style:"currency",currency:"USD",minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);}
+function moneyCell(p){return amount(p)?new Intl.NumberFormat("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}).format(amount(p)):(p.monto||"—");}
+function pct(n,total){return total?`${(n/total*100).toFixed(1)}% del total de proyectos`:"—";}
+function groupedStatus(p){
+ const s=(p.estado_dashboard||"").trim();
+ if(s==="En desarrollo"||s==="Por entregar")return "En Desarrollo";
+ if(s==="Entregado a OOPP"||s==="Entregado / SERCOP")return "Entregado para Contratación";
+ if(s==="Remitido a otra dirección"||s==="Gestión externa")return "Remitido a otra Dirección";
+ if(s==="No iniciado"||s==="Sin estado registrado")return "No Iniciado";
+ return "En Desarrollo";
+}
+function displayCategory(v){return v==="Otros"?"Fuera del PAC":v;}
+function unique(field){return [...new Set(projects.map(p=>p[field]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"es"));}
+function fillSelect(el,vals){vals.forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v;el.appendChild(o);});}
 
-        <article class="chart-card">
-          <h2>MONTO DE INVERSIÓN POR PARROQUIA</h2>
-          <div class="chart-wrap">
-            <canvas id="parishMoneyChart"></canvas>
-          </div>
-        </article>
-      </section>
+function renderKpis(){
+ const total=projects.length,pac=projects.filter(p=>p.categoria==="PAC"),fuera=projects.filter(p=>p.categoria==="Otros"),
+       entregados=projects.filter(p=>groupedStatus(p)==="Entregado para Contratación");
+ els.total.textContent=total;els.pac.textContent=pac.length;els.otros.textContent=fuera.length;els.oopp.textContent=entregados.length;
+ els.moneyTotal.textContent=moneyValue(projects.reduce((s,p)=>s+amount(p),0));
+ els.moneyPac.textContent=moneyValue(pac.reduce((s,p)=>s+amount(p),0));
+ els.moneyOtros.textContent=moneyValue(fuera.reduce((s,p)=>s+amount(p),0));
+ els.moneyOopp.textContent=moneyValue(entregados.reduce((s,p)=>s+amount(p),0));
+ els.pctPac.textContent=pct(pac.length,total);els.pctOtros.textContent=pct(fuera.length,total);els.pctOopp.textContent=pct(entregados.length,total);
+}
 
-      <section class="projects-box">
-        <div class="filters">
-          <label>
-            <span>Categoría</span>
-            <select id="categoryFilter">
-              <option value="">Todas</option>
-              <option value="PAC">PAC</option>
-              <option value="Otros">Fuera del PAC</option>
-            </select>
-          </label>
+const valueLabelsPlugin={
+ id:"valueLabels",
+ afterDatasetsDraw(chart,args,opts){
+  if(!opts||!opts.enabled)return;
+  const {ctx}=chart;
+  ctx.save();ctx.font="700 10px Arial";ctx.fillStyle="#13213d";ctx.textAlign="center";
+  chart.data.datasets.forEach((dataset,di)=>{
+   const meta=chart.getDatasetMeta(di);
+   meta.data.forEach((element,i)=>{
+    const value=dataset.data[i];
+    const label=opts.formatter?opts.formatter(value,i,chart):value;
+    if(chart.config.type==="bar" && chart.options.indexAxis==="y"){
+      ctx.textAlign="left";ctx.fillText(label,element.x+8,element.y+3);
+    }else{
+      ctx.textAlign="center";ctx.fillText(label,element.x,element.y-8);
+    }
+   });
+  });
+  ctx.restore();
+ }
+};
+Chart.register(valueLabelsPlugin);
 
-          <label>
-            <span>Parroquia</span>
-            <select id="parishFilter"><option value="">Todas</option></select>
-          </label>
+function renderCharts(){
+ Chart.defaults.font.family='Arial, "Helvetica Neue", sans-serif';Chart.defaults.color="#344054";Chart.defaults.font.size=10;
 
-          <label>
-            <span>Estado</span>
-            <select id="statusFilter">
-              <option value="">Todos</option>
-              <option value="En Desarrollo">En Desarrollo</option>
-              <option value="Entregado para Contratación">Entregado para Contratación</option>
-              <option value="Remitido a otra Dirección">Remitido a otra Dirección</option>
-              <option value="No Iniciado">No Iniciado</option>
-            </select>
-          </label>
+ const pac=projects.filter(p=>p.categoria==="PAC").length,fuera=projects.filter(p=>p.categoria==="Otros").length;
+ categoryChart?.destroy();
+ categoryChart=new Chart($("#categoryChart"),{
+  type:"doughnut",
+  data:{labels:["PAC","Fuera del PAC"],datasets:[{data:[pac,fuera],backgroundColor:[COLORS.blue,COLORS.red],borderColor:"#fff",borderWidth:2}]},
+  options:{responsive:true,maintainAspectRatio:false,cutout:"52%",plugins:{legend:{position:"bottom",labels:{boxWidth:10,padding:12}},tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw} (${(c.raw/projects.length*100).toFixed(1)}%)`}}}}
+ });
 
-          <label class="search-label">
-            <span>&nbsp;</span>
-            <div class="search-input-wrap">
-              <span class="search-ico">⌕</span>
-              <input id="search" type="search" placeholder="Buscar proyecto o parroquia...">
-            </div>
-          </label>
+ const order=["En Desarrollo","Entregado para Contratación","Remitido a otra Dirección","No Iniciado"];
+ const sc=Object.fromEntries(order.map(s=>[s,0]));projects.forEach(p=>sc[groupedStatus(p)]++);
+ statusChart?.destroy();
+ statusChart=new Chart($("#statusChart"),{
+  type:"bar",
+  data:{labels:order,datasets:[{data:order.map(k=>sc[k]),backgroundColor:[COLORS.navy,COLORS.green,COLORS.blue,COLORS.red],borderRadius:2,barThickness:18}]},
+  options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,layout:{padding:{right:30}},plugins:{legend:{display:false},valueLabels:{enabled:true}},
+   scales:{x:{beginAtZero:true,grid:{color:"#edf1f6"},ticks:{stepSize:5}},y:{grid:{display:false}}}}
+ });
 
-          <button id="clearFilters" class="clear-btn" type="button">↻&nbsp; Limpiar filtros</button>
-        </div>
+ const pc={};projects.forEach(p=>{const k=p.parroquia||"Sin información";pc[k]=(pc[k]||0)+1;});
+ const pe=Object.entries(pc).sort((a,b)=>b[1]-a[1]);
+ parishChart?.destroy();
+ parishChart=new Chart($("#parishChart"),{
+  type:"bar",
+  data:{labels:pe.map(x=>x[0]),datasets:[{label:"Proyectos",data:pe.map(x=>x[1]),backgroundColor:pe.map((_,i)=>PALETTE[i%PALETTE.length]),borderRadius:2,barPercentage:.7}]},
+  options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:18}},plugins:{
+    legend:{display:false},
+    valueLabels:{enabled:true,formatter:v=>String(v)},
+    tooltip:{callbacks:{label:c=>`${c.raw} proyecto${c.raw===1?"":"s"}`}}
+   },scales:{y:{beginAtZero:true,grid:{color:"#edf1f6"},ticks:{stepSize:1,precision:0}},x:{grid:{display:false},ticks:{maxRotation:35,minRotation:0,autoSkip:false}}}}
+ });
 
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>N°</th>
-                <th>PROYECTO</th>
-                <th>PARROQUIA</th>
-                <th>CATEGORÍA</th>
-                <th>MONTO (USD)</th>
-                <th>DESCRIPCIÓN</th>
-                <th>ESTADO</th>
-                <th>FECHA PREVISTA</th>
-                <th>ACCIONES</th>
-              </tr>
-            </thead>
-            <tbody id="projectsBody"></tbody>
-          </table>
-        </div>
+ const pm={};projects.forEach(p=>{const k=p.parroquia||"Sin información";pm[k]=(pm[k]||0)+amount(p);});
+ const pme=Object.entries(pm).sort((a,b)=>b[1]-a[1]);
+ parishMoneyChart?.destroy();
+ parishMoneyChart=new Chart($("#parishMoneyChart"),{
+  type:"bar",
+  data:{labels:pme.map(x=>x[0]),datasets:[{label:"Inversión",data:pme.map(x=>x[1]),backgroundColor:pme.map((_,i)=>PALETTE[i%PALETTE.length]),borderRadius:3,barPercentage:.62}]},
+  options:{
+   responsive:true,maintainAspectRatio:false,
+   layout:{padding:{top:28,left:8,right:8,bottom:0}},
+   onHover:(evt,elements)=>{evt.native.target.style.cursor=elements.length?"pointer":"default";},
+   onClick:(evt,elements)=>{
+     if(!elements.length)return;
+     const idx=elements[0].index;
+     openParishInvestmentModal(pme[idx][0]);
+   },
+   plugins:{
+    legend:{display:true,position:"bottom",labels:{
+      usePointStyle:true,boxWidth:8,padding:14,
+      generateLabels:chart=>chart.data.labels.map((label,i)=>({
+        text:label,fillStyle:chart.data.datasets[0].backgroundColor[i],strokeStyle:chart.data.datasets[0].backgroundColor[i],
+        pointStyle:"circle",hidden:false,datasetIndex:0,index:i
+      }))
+    }},
+    valueLabels:{enabled:true,formatter:v=>moneyValue(v)},
+    tooltip:{callbacks:{label:c=>moneyValue(c.raw)}}
+   },
+   scales:{
+    y:{beginAtZero:true,grid:{color:"#edf1f6"},ticks:{callback:v=>new Intl.NumberFormat("es-EC",{notation:"compact",maximumFractionDigits:1}).format(v)}},
+    x:{grid:{display:false},ticks:{maxRotation:0,minRotation:0,autoSkip:false}}
+   }
+  }
+ });
+}
 
-        <div class="pagination-row">
-          <span id="rangeLabel">Mostrando 0 proyectos</span>
-          <div id="pagination" class="pagination"></div>
-          <label class="page-size">
-            Mostrar
-            <select id="pageSize">
-              <option value="10">10</option>
-              <option value="20">20</option>
-              <option value="37">Todos</option>
-            </select>
-          </label>
-        </div>
-      </section>
-    </main>
+function openParishInvestmentModal(parish){
+ const list=projects.filter(p=>(p.parroquia||"Sin información")===parish).sort((a,b)=>amount(b)-amount(a));
+ const total=list.reduce((s,p)=>s+amount(p),0);
+ els.parishModalContent.innerHTML=`
+   <p class="modal-kicker">Detalle de inversión por parroquia</p>
+   <h3 id="parishModalTitle">${esc(parish)}</h3>
+   <div class="parish-summary">
+     <span>Proyectos incluidos</span><strong>${list.length}</strong>
+     <span>Inversión total</span><strong>${esc(moneyValue(total))}</strong>
+   </div>
+   <div class="parish-list">
+     ${list.map((p,i)=>`
+       <div class="project-invest-row">
+         <div class="project-invest-name"><strong>${i+1}. ${esc(p.proyecto)}</strong></div>
+         <div class="project-invest-amount">${esc(moneyValue(amount(p)))}</div>
+       </div>`).join("")}
+   </div>`;
+ els.parishModal.classList.add("open");els.parishModal.setAttribute("aria-hidden","false");document.body.style.overflow="hidden";
+}
+function closeParishModal(){els.parishModal.classList.remove("open");els.parishModal.setAttribute("aria-hidden","true");document.body.style.overflow="";}
 
-    <footer>
-      <span>© 2026 Gobierno Autónomo Descentralizado Municipal del cantón Riobamba</span>
-      <span>Fuente: Jefatura de Diseño de la Obra Pública</span>
-    </footer>
-  </div>
-
-  <div id="modal" class="modal" aria-hidden="true">
-    <div class="modal-backdrop" data-close="true"></div>
-    <article class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-      <button class="modal-close" id="modalClose" type="button" aria-label="Cerrar">×</button>
-      <div id="modalContent"></div>
-    </article>
-  </div>
-
-  <script src="./app.js"></script>
+function filtered(){
+ const q=els.search.value.trim().toLocaleLowerCase("es");
+ return projects.filter(p=>{
+  const hay=[p.proyecto,p.parroquia,p.estado_original,p.responsables].join(" ").toLocaleLowerCase("es");
+  return(!q||hay.includes(q))&&(!els.category.value||p.categoria===els.category.value)&&(!els.parish.value||p.parroquia===els.parish.value)&&(!els.status.value||groupedStatus(p)===els.status.value);
+ });
+}
+function renderTable(){
+ const list=filtered(),totalPages=Math.max(1,Math.ceil(list.length/pageSize));if(currentPage>totalPages)currentPage=totalPages;
+ const start=(currentPage-1)*pageSize,end=Math.min(start+pageSize,list.length),page=list.slice(start,end);
+ els.range.textContent=list.length?`Mostrando ${start+1} a ${end} de ${list.length} proyectos`:"No hay proyectos para mostrar";
+ els.body.innerHTML=page.length?page.map(p=>`<tr>
+  <td>${String(p.item).padStart(2,"0")}</td><td><div class="project-title">${esc(p.proyecto)}</div></td><td>${esc(p.parroquia||"—")}</td>
+  <td><span class="tag">${esc(displayCategory(p.categoria))}</span></td><td>${esc(moneyCell(p))}</td>
+  <td><div class="description-cell">${esc(p.estado_original||"Sin descripción registrada")}</div></td>
+  <td><span class="status-pill" data-status="${esc(groupedStatus(p))}">${esc(groupedStatus(p))}</span></td>
+  <td>${esc(p.fecha_entrega||"—")}</td><td><button class="detail-btn" data-item="${esc(p.item)}">◉ &nbsp;Ver detalle</button></td>
+ </tr>`).join(""):`<tr><td colspan="9" style="text-align:center;padding:30px;color:#667085">No existen proyectos con los filtros seleccionados.</td></tr>`;
+ els.body.querySelectorAll("[data-item]").forEach(b=>b.addEventListener("click",()=>openModal(b.dataset.item)));renderPagination(totalPages);
+}
+function renderPagination(totalPages){
+ const buttons=[`<button class="page-btn" data-page="${Math.max(1,currentPage-1)}">«</button>`];
+ for(let i=1;i<=totalPages;i++)buttons.push(`<button class="page-btn ${i===currentPage?"active":""}" data-page="${i}">${i}</button>`);
+ buttons.push(`<button class="page-btn" data-page="${Math.min(totalPages,currentPage+1)}">»</button>`);els.pagination.innerHTML=buttons.join("");
+ els.pagination.querySelectorAll("[data-page]").forEach(b=>b.addEventListener("click",()=>{currentPage=Number(b.dataset.page);renderTable();}));
+}
+function detail(label,value,full=false){return `<div class="detail ${full?"full":""}"><span>${esc(label)}</span><strong>${esc(value||"Sin información registrada")}</strong></div>`;}
+function openModal(item){
+ const p=projects.find(x=>String(x.item)===String(item));if(!p)return;
+ els.modalContent.innerHTML=`<p class="modal-kicker">Proyecto ${esc(p.item)} · ${esc(displayCategory(p.categoria))}</p><h3 id="modalTitle">${esc(p.proyecto)}</h3><div class="detail-grid">
+ ${detail("Parroquia",p.parroquia)}${detail("Monto",moneyValue(amount(p)))}${detail("Número de trámite",p.tramite)}${detail("Estado agrupado",groupedStatus(p))}
+ ${detail("Fecha prevista / entrega",p.fecha_entrega)}${detail("Responsables",p.responsables,true)}${detail("Descripción / estado registrado",p.estado_original,true)}</div>`;
+ els.modal.classList.add("open");els.modal.setAttribute("aria-hidden","false");document.body.style.overflow="hidden";
+}
+function closeModal(){els.modal.classList.remove("open");els.modal.setAttribute("aria-hidden","true");document.body.style.overflow="";}
+function resetPageAndRender(){currentPage=1;renderTable();}
+function bind(){
+ [els.category,els.parish,els.status].forEach(el=>el.addEventListener("change",resetPageAndRender));
+ els.search.addEventListener("input",resetPageAndRender);
+ els.clear.addEventListener("click",()=>{els.search.value="";els.category.value="";els.parish.value="";els.status.value="";currentPage=1;renderTable();});
+ els.pageSize.addEventListener("change",()=>{pageSize=els.pageSize.value==="37"?37:Number(els.pageSize.value);currentPage=1;renderTable();});
+ els.modalClose.addEventListener("click",closeModal);els.modal.addEventListener("click",e=>{if(e.target.dataset.close)closeModal();});
+ els.parishModalClose.addEventListener("click",closeParishModal);els.parishModal.addEventListener("click",e=>{if(e.target.dataset.parishClose)closeParishModal();});
+ document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeModal();closeParishModal();}});
+}
+async function init(){
+ const res=await fetch("./data/proyectos.csv",{cache:"no-store"});if(!res.ok)throw new Error("No se pudo cargar data/proyectos.csv");
+ projects=parseCSV(await res.text()).map(p=>({...p,item:Number(p.item)}));
+ fillSelect(els.parish,unique("parroquia"));renderKpis();renderCharts();renderTable();bind();
+}
+init().catch(err=>{console.error(err);els.body.innerHTML=`<tr><td colspan="9" style="padding:30px;text-align:center">No se pudo cargar la información.</td></tr>`;});
+</script>
 </body>
 </html>
