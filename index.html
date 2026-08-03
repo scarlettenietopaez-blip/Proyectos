@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#223260">
+  <title>Seguimiento de Proyectos | GADM Riobamba</title>
+  <link rel="icon" type="image/png" href="./assets/favicon.png">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="container brand-row">
+      <img src="./assets/logo-riobamba.png" alt="GADM Riobamba" class="brand-logo">
+      <div class="brand-copy">
+        <p class="eyebrow">Dirección de Gestión de Planificación, Hábitat y Desarrollo Urbanístico</p>
+        <h1>Seguimiento de Proyectos</h1>
+        <p class="subtitle">Jefatura de Diseño de la Obra Pública · Corte de información: agosto 2026</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="kpi-grid" aria-label="Resumen general">
+      <article class="kpi"><span class="kpi-label">Total de proyectos</span><strong id="kpiTotal">—</strong></article>
+      <article class="kpi"><span class="kpi-label">Proyectos PAC</span><strong id="kpiPac">—</strong></article>
+      <article class="kpi"><span class="kpi-label">Otros proyectos</span><strong id="kpiOtros">—</strong></article>
+      <article class="kpi accent"><span class="kpi-label">Entregados a OOPP</span><strong id="kpiOopp">—</strong></article>
+    </section>
+
+    <section class="summary-grid">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="section-kicker">Cartera</p>
+            <h2>Distribución por categoría</h2>
+          </div>
+        </div>
+        <div id="categoryBars" class="bars"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="section-kicker">Situación</p>
+            <h2>Estado general</h2>
+          </div>
+        </div>
+        <div id="statusBars" class="bars"></div>
+      </article>
+    </section>
+
+    <section class="panel projects-panel">
+      <div class="panel-head projects-head">
+        <div>
+          <p class="section-kicker">Detalle</p>
+          <h2>Proyectos</h2>
+          <p class="muted" id="resultCount">Cargando información…</p>
+        </div>
+        <button id="clearFilters" class="ghost-btn" type="button">Limpiar filtros</button>
+      </div>
+
+      <div class="filters">
+        <label class="search-box">
+          <span>Buscar proyecto</span>
+          <input id="search" type="search" placeholder="Nombre, trámite o parroquia…">
+        </label>
+
+        <label>
+          <span>Categoría</span>
+          <select id="categoryFilter">
+            <option value="">Todas</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Parroquia</span>
+          <select id="parishFilter">
+            <option value="">Todas</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Estado</span>
+          <select id="statusFilter">
+            <option value="">Todos</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="num">N.º</th>
+              <th>Proyecto</th>
+              <th>Parroquia</th>
+              <th>Categoría</th>
+              <th>Monto</th>
+              <th>Situación</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="projectsBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="data-note">
+      <strong>Nota de lectura:</strong>
+      el tablero reproduce la información disponible en la matriz de seguimiento. No se calculan porcentajes de avance ni se completan datos faltantes.
+    </section>
+  </main>
+
+  <div id="modal" class="modal" aria-hidden="true">
+    <div class="modal-backdrop" data-close="true"></div>
+    <article class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button class="modal-close" id="modalClose" type="button" aria-label="Cerrar">×</button>
+      <div id="modalContent"></div>
+    </article>
+  </div>
+
+  <footer>
+    <div class="container footer-inner">
+      <img src="./assets/escudo-riobamba.png" alt="" class="footer-crest">
+      <span>Gobierno Autónomo Descentralizado Municipal del cantón Riobamba</span>
+    </div>
+  </footer>
+
+  <script src="./app.js"></script>
+</body>
+</html>
