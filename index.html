@@ -386,13 +386,7 @@ function renderCharts(){
      openParishInvestmentModal(pme[idx][0]);
    },
    plugins:{
-    legend:{display:true,position:"bottom",labels:{
-      usePointStyle:true,boxWidth:8,padding:14,
-      generateLabels:chart=>chart.data.labels.map((label,i)=>({
-        text:label,fillStyle:chart.data.datasets[0].backgroundColor[i],strokeStyle:chart.data.datasets[0].backgroundColor[i],
-        pointStyle:"circle",hidden:false,datasetIndex:0,index:i
-      }))
-    }},
+    legend:{display:false},
     valueLabels:{enabled:true,formatter:v=>moneyValue(v)},
     tooltip:{callbacks:{label:c=>moneyValue(c.raw)}}
    },
