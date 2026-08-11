@@ -562,19 +562,30 @@ function projectLocations(p){
 function parishColorExpression(){
  return [
    "match",["get","nombre_mapa"],
-   "CACHA","#ef476f",
-   "CALPI","#f4a261",
-   "CUBIJIES","#06d6a0",
-   "FLORES","#ff7f11",
-   "LICAN","#8d5bd1",
-   "LICTO","#3a86ff",
-   "PUNGALA","#9b5de5",
-   "PUNIN","#f2b134",
-   "QUIMIAG","#00a6a6",
-   "RIOBAMBA","#0d2a5b",
-   "SAN JUAN","#28a9df",
-   "YARUQUIES","#7a889e",
-   "#8ac926"
+
+   /* Parroquias urbanas */
+   "VELASCO","#4E79A7",
+   "MALDONADO","#E15759",
+   "VELOZ","#76B7B2",
+   "LIZARZABURU","#B07AA1",
+   "YARUQUIES","#59A14F",
+
+   /* Parroquias rurales */
+   "Cacha","#F28E2B",
+   "Calpi","#AF7AA1",
+   "Cubijies","#2A9D8F",
+   "Flores","#E76F51",
+   "Lican","#6C5CE7",
+   "Licto","#EDC948",
+   "Pungala","#FF6B6B",
+   "Punin","#F4A261",
+   "Quimiag","#00A6A6",
+   "Riobamba","#457B9D",
+   "San Juan","#7CB342",
+   "San Luis","#90BE6D",
+
+   /* Color de respaldo */
+   "#8AB17D"
  ];
 }
 
@@ -668,7 +679,7 @@ async function renderProjectMap(){
        source:"parroquias",
        paint:{
          "line-color":"#ffffff",
-         "line-width":1.4,
+         "line-width":1.8,
          "line-opacity":0.95
        }
      });
@@ -677,17 +688,42 @@ async function renderProjectMap(){
        type:"symbol",
        source:"parroquias",
        layout:{
-         "text-field":["coalesce",["get","nombre_mapa"],["get","nombre"],["get","nombre_1"]],
-         "text-size":10,
+         "text-field":[
+           "coalesce",
+           ["get","nombre_mapa"],
+           ["get","nombre"],
+           ["get","nombre_1"],
+           "PARROQUIA"
+         ],
+         "text-size":12,
          "text-font":["Open Sans Regular"],
-         "text-allow-overlap":false
+         "text-anchor":"center",
+         "text-allow-overlap":true,
+         "text-ignore-placement":false,
+         "symbol-placement":"point"
        },
        paint:{
-         "text-color":"#17345f",
+         "text-color":"#102758",
          "text-halo-color":"#ffffff",
-         "text-halo-width":1.5
+         "text-halo-width":2.2,
+         "text-halo-blur":0.4
        }
      });
+
+
+     map.on("click","parroquias-fill",e=>{
+       const f=e.features?.[0];
+       if(!f) return;
+       const props=f.properties||{};
+       const parishName=props.nombre_mapa||props.nombre||props.nombre_1||"Parroquia";
+       new maplibregl.Popup({closeButton:true,offset:8})
+         .setLngLat(e.lngLat)
+         .setHTML(`<strong>${esc(parishName)}</strong>`)
+         .addTo(map);
+     });
+
+     map.on("mouseenter","parroquias-fill",()=>map.getCanvas().style.cursor="pointer");
+     map.on("mouseleave","parroquias-fill",()=>map.getCanvas().style.cursor="");
 
      map.addSource("proyectos",{type:"geojson",data:projectGeo});
      map.addLayer({
