@@ -7,6 +7,9 @@
   <title>Seguimiento de Proyectos | GADM Riobamba</title>
   <link rel="icon" type="image/png" href="./assets/favicon.png">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/proj4@2.11.0/dist/proj4.js"></script>
 <style>
     :root{
       --navy:#0d2a5b; --navy2:#123b78; --blue:#1e63d5; --red:#ef2b31; --green:#07964d;
@@ -144,7 +147,62 @@
     }
   
     @media(max-width:760px){
-      </style>
+      
+    /* V12 - MAPA MAPLIBRE */
+    .map-card{
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:12px;
+      box-shadow:var(--shadow);
+      padding:17px 20px 20px;
+      margin-bottom:18px;
+    }
+    .map-card-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:20px;
+      margin-bottom:10px;
+    }
+    .map-card h2{font-size:13px;margin:0 0 5px;color:#102758}
+    .map-card p{margin:0;color:#667085;font-size:11px}
+    #projectsMap{
+      width:100%;
+      height:590px;
+      border-radius:10px;
+      border:1px solid #dbe3ee;
+      overflow:hidden;
+      background:#eef3f8;
+    }
+    .map-count{
+      display:inline-flex;
+      align-items:center;
+      padding:7px 10px;
+      border-radius:6px;
+      background:#fff4e5;
+      color:#8a5600;
+      font-size:10px;
+      font-weight:700;
+      white-space:nowrap;
+    }
+    .maplibregl-popup-content{
+      font-family:Arial,"Helvetica Neue",sans-serif;
+      font-size:11px;
+      color:#344054;
+      border-radius:8px;
+      box-shadow:0 8px 26px rgba(13,42,91,.18);
+      padding:12px 14px;
+    }
+    .maplibregl-popup-content strong{color:#0d2a5b}
+    .maplibregl-ctrl-group{
+      border-radius:8px!important;
+      box-shadow:0 3px 12px rgba(13,42,91,.15)!important;
+    }
+    @media(max-width:760px){
+      #projectsMap{height:470px}
+      .map-card-head{flex-direction:column}
+    }
+  </style>
 </head>
 <body>
 <div class="app-shell">
@@ -203,7 +261,19 @@
       <p class="chart-note">Haz clic sobre una barra para ver los proyectos que conforman esa parroquia y sus montos individuales.</p>
       <div class="chart-wrap"><canvas id="parishMoneyChart"></canvas></div>
     </section>
-<section class="projects-box">
+
+    <section class="map-card">
+      <div class="map-card-head">
+        <div>
+          <h2>LOCALIZACIÓN DE PROYECTOS POR PARROQUIA</h2>
+          <p>Mapa interactivo con cartografía base, parroquias al 50% de opacidad y proyectos georreferenciados con nombre visible.</p>
+        </div>
+        <div id="mapProjectCount" class="map-count">Cargando mapa…</div>
+      </div>
+      <div id="projectsMap" aria-label="Mapa interactivo de proyectos" style="width:100%;height:590px;min-height:590px;"></div>
+    </section>
+
+    <section class="projects-box">
       <div class="filters">
         <label><span>Categoría</span><select id="categoryFilter"><option value="">Todas</option><option value="PAC">PAC</option><option value="Fuera del PAC">Fuera del PAC</option></select></label>
         <label><span>Parroquia</span><select id="parishFilter"><option value="">Todas</option></select></label>
@@ -426,6 +496,291 @@ function openParishInvestmentModal(parish){
 function closeParishModal(){els.parishModal.classList.remove("open");els.parishModal.setAttribute("aria-hidden","true");document.body.style.overflow="";}
 
 
+
+function parseCoordinateEntries(raw){
+ const text=String(raw??"").trim();
+ if(!text) return [];
+ const lines=text.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+ const entries=[];
+ let pendingLabel="";
+
+ if(lines.length===1){
+   const n=Number(lines[0].replace(",","."));
+   return Number.isFinite(n)?[{label:"",value:n}]:[];
+ }
+
+ for(const line of lines){
+   const n=Number(line.replace(",",".").trim());
+   if(Number.isFinite(n)){
+     entries.push({label:pendingLabel,value:n});
+     pendingLabel="";
+   }else{
+     pendingLabel=line;
+   }
+ }
+ return entries;
+}
+
+function projectLocations(p){
+ const xs=parseCoordinateEntries(p["Coordenadas X"]);
+ const ys=parseCoordinateEntries(p["Coordenadas Y"]);
+ if(!xs.length || !ys.length) return [];
+
+ const locations=[];
+ const max=Math.max(xs.length,ys.length);
+
+ for(let i=0;i<max;i++){
+   const xe=xs[i], ye=ys[i];
+   if(!xe || !ye) continue;
+
+   let x=xe.value, y=ye.value;
+   if(!Number.isFinite(x)||!Number.isFinite(y)) continue;
+
+   // Protección para X/Y UTM cruzadas.
+   if(x>1000000 && y<1000000){
+     const t=x; x=y; y=t;
+   }
+
+   const label=(xe.label||ye.label||`Ubicación ${i+1}`).trim();
+
+   if(Math.abs(x)<=180 && Math.abs(y)<=90){
+     locations.push({label,lng:x,lat:y});
+     continue;
+   }
+
+   try{
+     proj4.defs("EPSG:32717","+proj=utm +zone=17 +south +datum=WGS84 +units=m +no_defs +type=crs");
+     const ll=proj4("EPSG:32717","EPSG:4326",[x,y]);
+     locations.push({label,lng:ll[0],lat:ll[1]});
+   }catch(err){
+     console.warn("No se pudo convertir coordenada",p.proyecto,label,err);
+   }
+ }
+ return locations;
+}
+
+function parishColorExpression(){
+ return [
+   "match",["get","nombre_mapa"],
+   "CACHA","#ef476f",
+   "CALPI","#f4a261",
+   "CUBIJIES","#06d6a0",
+   "FLORES","#ff7f11",
+   "LICAN","#8d5bd1",
+   "LICTO","#3a86ff",
+   "PUNGALA","#9b5de5",
+   "PUNIN","#f2b134",
+   "QUIMIAG","#00a6a6",
+   "RIOBAMBA","#0d2a5b",
+   "SAN JUAN","#28a9df",
+   "YARUQUIES","#7a889e",
+   "#8ac926"
+ ];
+}
+
+async function renderProjectMap(){
+ const mapCount=document.getElementById("mapProjectCount");
+ const mapContainer=document.getElementById("projectsMap");
+
+ if(typeof maplibregl==="undefined"){
+   if(mapCount) mapCount.textContent="No se pudo cargar la librería del mapa";
+   if(mapContainer){
+     mapContainer.innerHTML='<div style="height:100%;display:grid;place-items:center;color:#667085;font-size:12px">No se pudo cargar MapLibre GL JS.</div>';
+   }
+   return;
+ }
+
+ try{
+   const [parishRes]=await Promise.all([
+     fetch("./data/parroquias.geojson",{cache:"no-store"})
+   ]);
+   if(!parishRes.ok) throw new Error("No se pudo cargar parroquias.geojson");
+   const parishGeo=await parishRes.json();
+
+   const pointFeatures=[];
+   projects.forEach((p,i)=>{
+     const locs=projectLocations(p);
+     locs.forEach((loc,locIndex)=>{
+       pointFeatures.push({
+         type:"Feature",
+         geometry:{type:"Point",coordinates:[loc.lng,loc.lat]},
+         properties:{
+           item:String(p.item??i+1),
+           proyecto:p.proyecto||"",
+           ubicacion:locs.length>1?loc.label:"",
+           parroquia:p.parroquia||"",
+           categoria:displayCategory(p.categoria),
+           estado:groupedStatus(p),
+           monto:amount(p)>0?moneyValue(amount(p)):(p.monto||"—"),
+           avance:(p.Avance!==""&&p.Avance!=null)
+             ? `${Number(p.Avance)<=1?Math.round(Number(p.Avance)*100):p.Avance}%`
+             : "—"
+         }
+       });
+     });
+   });
+
+   const projectGeo={type:"FeatureCollection",features:pointFeatures};
+
+   const map=new maplibregl.Map({
+     container:"projectsMap",
+     style:{
+       version:8,
+       sources:{
+         osm:{
+           type:"raster",
+           tiles:["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+           tileSize:256,
+           attribution:"© OpenStreetMap contributors"
+         }
+       },
+       layers:[
+         {id:"osm",type:"raster",source:"osm",paint:{"raster-opacity":0.82}}
+       ]
+     },
+     center:[-78.65,-1.67],
+     zoom:9.5,
+     minZoom:7,
+     maxZoom:18,
+     attributionControl:true
+   });
+
+   map.addControl(new maplibregl.NavigationControl(),"top-right");
+
+   map.on("load",()=>{
+     map.resize();
+     setTimeout(()=>map.resize(),100);
+     setTimeout(()=>map.resize(),400);
+
+     map.addSource("parroquias",{type:"geojson",data:parishGeo});
+     map.addLayer({
+       id:"parroquias-fill",
+       type:"fill",
+       source:"parroquias",
+       paint:{
+         "fill-color":parishColorExpression(),
+         "fill-opacity":0.50
+       }
+     });
+     map.addLayer({
+       id:"parroquias-line",
+       type:"line",
+       source:"parroquias",
+       paint:{
+         "line-color":"#ffffff",
+         "line-width":1.4,
+         "line-opacity":0.95
+       }
+     });
+     map.addLayer({
+       id:"parroquias-label",
+       type:"symbol",
+       source:"parroquias",
+       layout:{
+         "text-field":["coalesce",["get","nombre_mapa"],["get","nombre"],["get","nombre_1"]],
+         "text-size":10,
+         "text-font":["Open Sans Regular"],
+         "text-allow-overlap":false
+       },
+       paint:{
+         "text-color":"#17345f",
+         "text-halo-color":"#ffffff",
+         "text-halo-width":1.5
+       }
+     });
+
+     map.addSource("proyectos",{type:"geojson",data:projectGeo});
+     map.addLayer({
+       id:"proyectos-circle",
+       type:"circle",
+       source:"proyectos",
+       paint:{
+         "circle-radius":7,
+         "circle-color":"#e83f44",
+         "circle-stroke-color":"#ffffff",
+         "circle-stroke-width":2,
+         "circle-opacity":1
+       }
+     });
+     map.addLayer({
+       id:"proyectos-label",
+       type:"symbol",
+       source:"proyectos",
+       layout:{
+         "text-field":[
+           "case",
+           ["!=",["get","ubicacion"],""],
+           ["concat",["get","proyecto"]," · ",["get","ubicacion"]],
+           ["get","proyecto"]
+         ],
+         "text-size":10,
+         "text-anchor":"left",
+         "text-offset":[1.1,0],
+         "text-allow-overlap":true
+       },
+       paint:{
+         "text-color":"#0d2a5b",
+         "text-halo-color":"#ffffff",
+         "text-halo-width":2
+       }
+     });
+
+     const bounds=new maplibregl.LngLatBounds();
+     parishGeo.features.forEach(f=>{
+       const walk=c=>{
+         if(Array.isArray(c) && typeof c[0]==="number"){
+           bounds.extend(c);
+         }else if(Array.isArray(c)){
+           c.forEach(walk);
+         }
+       };
+       walk(f.geometry.coordinates);
+     });
+     pointFeatures.forEach(f=>bounds.extend(f.geometry.coordinates));
+
+     if(!bounds.isEmpty()){
+       map.fitBounds(bounds,{padding:38,duration:0});
+     }
+
+     if(mapCount){
+       mapCount.textContent=`${pointFeatures.length} ubicación${pointFeatures.length===1?"":"es"} georreferenciada${pointFeatures.length===1?"":"s"}`;
+     }
+   });
+
+   map.on("click","proyectos-circle",e=>{
+     const f=e.features?.[0];
+     if(!f) return;
+     const p=f.properties;
+     const htmlPopup=`
+       <div style="min-width:240px">
+         <strong>${esc(p.proyecto)}</strong><br>
+         ${p.ubicacion?`<span><b>Ubicación:</b> ${esc(p.ubicacion)}</span><br>`:""}
+         <span><b>Parroquia:</b> ${esc(p.parroquia||"—")}</span><br>
+         <span><b>Categoría:</b> ${esc(p.categoria||"—")}</span><br>
+         <span><b>Estado:</b> ${esc(p.estado||"—")}</span><br>
+         <span><b>Monto:</b> ${esc(p.monto||"—")}</span><br>
+         <span><b>Avance:</b> ${esc(p.avance||"—")}</span>
+       </div>`;
+     new maplibregl.Popup({closeButton:true,offset:12})
+       .setLngLat(f.geometry.coordinates)
+       .setHTML(htmlPopup)
+       .addTo(map);
+   });
+
+   map.on("mouseenter","proyectos-circle",()=>map.getCanvas().style.cursor="pointer");
+   map.on("mouseleave","proyectos-circle",()=>map.getCanvas().style.cursor="");
+
+   map.on("error",e=>{
+     console.warn("MapLibre:",e.error||e);
+   });
+
+ }catch(err){
+   console.error(err);
+   if(mapCount) mapCount.textContent="No se pudo cargar el mapa";
+ }
+}
+
+
 function filtered(){
  const q=els.search.value.trim().toLocaleLowerCase("es");
  return projects.filter(p=>{
@@ -483,7 +838,7 @@ function bind(){
 async function init(){
  const res=await fetch("./data/proyectos.csv",{cache:"no-store"});if(!res.ok)throw new Error("No se pudo cargar data/proyectos.csv");
  projects=parseCSV(await res.text()).map(p=>({...p,item:Number(p.item)}));
- fillSelect(els.parish,unique("parroquia"));renderKpis();renderCharts();renderTable();bind();
+ fillSelect(els.parish,unique("parroquia"));renderKpis();renderCharts();renderTable();bind();await renderProjectMap();
 }
 init().catch(err=>{console.error(err);els.body.innerHTML=`<tr><td colspan="9" style="padding:30px;text-align:center">No se pudo cargar la información.</td></tr>`;});
 </script>
