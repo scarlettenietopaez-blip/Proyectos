@@ -264,6 +264,35 @@
     }
     .leaflet-tooltip.parish-name-label:before{display:none}
 
+  
+    /* V10: MAPA BASE + MARCADORES VECTORIALES */
+    #projectsMap{
+      background:#eef2f6 !important;
+    }
+    .leaflet-pane.leaflet-tile-pane{
+      filter:saturate(.72) brightness(1.04) contrast(.94);
+    }
+    .project-vector-label{
+      background:rgba(255,255,255,.94);
+      border:1px solid rgba(13,42,91,.22);
+      color:#0d2a5b;
+      border-radius:5px;
+      padding:3px 6px;
+      box-shadow:0 2px 7px rgba(13,42,91,.14);
+      font-size:9px;
+      line-height:1.15;
+      font-weight:800;
+      white-space:nowrap;
+      pointer-events:none;
+    }
+    .leaflet-tooltip.project-vector-label:before{display:none}
+    .leaflet-control-layers{
+      border:0 !important;
+      border-radius:8px !important;
+      box-shadow:0 3px 12px rgba(13,42,91,.16) !important;
+      font-size:10px;
+    }
+
   </style>
 </head>
 <body>
@@ -329,7 +358,7 @@
       <div class="map-card-head">
         <div>
           <h2>LOCALIZACIÓN DE PROYECTOS POR PARROQUIA</h2>
-          <p>Mapa vectorial autónomo. Las parroquias se muestran con colores diferenciados y 50% de opacidad; los proyectos con coordenadas registradas aparecen con marcador y nombre visible.</p>
+          <p>Mapa interactivo con cartografía base clara. Las parroquias se muestran con colores diferenciados y 50% de opacidad; los proyectos georreferenciados aparecen con puntos vectoriales y nombre visible.</p>
         </div>
         <div id="mapProjectCount" class="map-empty-note">Cargando mapa…</div>
       </div>
@@ -653,14 +682,44 @@ async function renderProjectMap(){
      preferCanvas:true,
      zoomSnap:.25,
      zoomDelta:.5,
-     attributionControl:false,
+     attributionControl:true,
      minZoom:7,
-     maxZoom:18
+     maxZoom:19
    });
 
-   // Mapa vectorial autónomo: no se cargan teselas externas.
-   // El fondo, parroquias y proyectos dependen solo de los archivos del repositorio.
+   // Mapa base claro, pensado para que los polígonos y proyectos sean protagonistas.
+   const cartoLight=L.tileLayer(
+     "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+     {
+       subdomains:"abcd",
+       maxZoom:20,
+       attribution:'&copy; OpenStreetMap contributors &copy; CARTO',
+       crossOrigin:true,
+       updateWhenIdle:false,
+       keepBuffer:5
+     }
+   ).addTo(projectsMap);
+
+   // Segunda alternativa disponible desde el control de capas.
+   const osmBase=L.tileLayer(
+     "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+     {
+       maxZoom:19,
+       attribution:'&copy; OpenStreetMap contributors',
+       crossOrigin:true,
+       updateWhenIdle:false,
+       keepBuffer:5
+     }
+   );
+
+   // Capa de proyectos separada y siempre por encima de las parroquias.
    projectMarkersLayer=L.layerGroup().addTo(projectsMap);
+
+   const baseMaps={
+     "Mapa claro":cartoLight,
+     "OpenStreetMap":osmBase
+   };
+   L.control.layers(baseMaps,null,{position:"topright",collapsed:true}).addTo(projectsMap);
 
    // Leaflet debe recalcular su tamaño cuando el Dashboard termina de maquetarse.
    const refreshMapSize=()=>{
@@ -695,7 +754,7 @@ async function renderProjectMap(){
 
    const legendItems=new Map();
 
-   parishesLayer=L.geoJSON(gj,{
+   parishesLayer=L.geoJSON(gj,{pane:"parroquiasPane",
      style:feature=>{
        const name=feature.properties?.nombre_mapa || feature.properties?.nombre || feature.properties?.nombre_1 || "Sin nombre";
        const color=parishColor(name);
@@ -751,15 +810,27 @@ async function renderProjectMap(){
      locations.forEach((loc,locIndex)=>{
        markers++;
 
-       const icon=L.divIcon({
-         className:"",
-         iconSize:[28,28],
-         iconAnchor:[14,28],
-         popupAnchor:[0,-28],
-         html:`<div class="project-marker" style="background:${color}"><span>${esc(p.item||i+1)}</span></div>`
-       });
+       // Marcador vectorial: se dibuja directamente sobre el mapa y no depende de iconos HTML.
+       const marker=L.circleMarker([loc.lat,loc.lng],{
+         pane:"markerPane",
+         radius:7,
+         color:"#ffffff",
+         weight:2.2,
+         opacity:1,
+         fillColor:color,
+         fillOpacity:1
+       }).addTo(projectMarkersLayer);
 
-       const marker=L.marker([loc.lat,loc.lng],{icon}).addTo(projectMarkersLayer);
+       // Aro exterior para mejorar contraste sobre el mapa base.
+       L.circleMarker([loc.lat,loc.lng],{
+         pane:"markerPane",
+         radius:10,
+         color:color,
+         weight:1.2,
+         opacity:.42,
+         fill:false,
+         interactive:false
+       }).addTo(projectMarkersLayer);
 
        const visibleName=locations.length>1
          ? `${p.proyecto} · ${loc.label}`
@@ -768,13 +839,13 @@ async function renderProjectMap(){
        marker.bindTooltip(esc(visibleName),{
          permanent:true,
          direction:"right",
-         offset:[12,-14],
-         className:"project-label",
+         offset:[10,0],
+         className:"project-vector-label",
          opacity:1
        });
 
        marker.bindPopup(`
-         <div style="min-width:230px">
+         <div style="min-width:240px">
            <strong style="color:#0d2a5b">${esc(p.proyecto)}</strong><br>
            ${locations.length>1?`<span><b>Ubicación:</b> ${esc(loc.label)}</span><br>`:""}
            <span><b>Parroquia:</b> ${esc(p.parroquia||"—")}</span><br>
@@ -784,10 +855,25 @@ async function renderProjectMap(){
            <span><b>Avance:</b> ${esc(p.Avance!==""&&p.Avance!=null?`${Number(p.Avance)<=1?Math.round(Number(p.Avance)*100):p.Avance}%`:"—")}</span>
          </div>
        `);
+
+       marker.on("mouseover",function(){
+         this.setStyle({radius:9,weight:3});
+       });
+       marker.on("mouseout",function(){
+         this.setStyle({radius:7,weight:2.2});
+       });
      });
    });
 
-   const bounds=parishesLayer.getBounds();
+   let bounds=parishesLayer.getBounds();
+   const markerBounds=[];
+   projects.forEach(p=>{
+     projectLocations(p).forEach(loc=>markerBounds.push([loc.lat,loc.lng]));
+   });
+   if(markerBounds.length){
+     const projectBounds=L.latLngBounds(markerBounds);
+     if(projectBounds.isValid()) bounds=bounds.extend(projectBounds);
+   }
    if(bounds.isValid()){
      // Primero recalculamos el tamaño real del contenedor y después ajustamos a Riobamba.
      projectsMap.invalidateSize({pan:false,animate:false});
