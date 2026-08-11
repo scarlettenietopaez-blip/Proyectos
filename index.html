@@ -91,9 +91,9 @@
     .tag{display:inline-flex;padding:5px 13px;border-radius:4px;background:#1f63ce;color:#fff;font-weight:700}
     .status-pill{display:inline-flex;min-width:112px;justify-content:center;padding:5px 8px;border-radius:4px;background:#0d2a5b;color:#fff;font-weight:700}
     .status-pill[data-status="Entregado para Contratación"]{background:#078744}
-    .status-pill[data-status="En Desarrollo"]{background:#0d2a5b}
-    .status-pill[data-status="Remitido a otra Dirección"]{background:#2a67c7}
-    .status-pill[data-status="No Iniciado"]{background:#7f1d1d}
+    .status-pill[data-status="En desarrollo"]{background:#0d2a5b}
+    .status-pill[data-status="Remitido a otra dirección"]{background:#2a67c7}
+    .status-pill[data-status="No iniciado"]{background:#7f1d1d}
     .detail-btn{border:0;background:transparent;color:#1b58bc;font-weight:700;cursor:pointer;white-space:nowrap}
     .pagination-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:11px 18px;color:#667085;font-size:10px}
     .pagination{display:flex;gap:5px;justify-content:center}.page-btn{min-width:31px;height:29px;border:1px solid #d3dbe7;background:#fff;color:#35425a;border-radius:4px;cursor:pointer}
@@ -204,14 +204,14 @@
 
     <section class="projects-box">
       <div class="filters">
-        <label><span>Categoría</span><select id="categoryFilter"><option value="">Todas</option><option value="PAC">PAC</option><option value="Otros">Fuera del PAC</option></select></label>
+        <label><span>Categoría</span><select id="categoryFilter"><option value="">Todas</option><option value="PAC">PAC</option><option value="Fuera del PAC">Fuera del PAC</option></select></label>
         <label><span>Parroquia</span><select id="parishFilter"><option value="">Todas</option></select></label>
         <label><span>Estado</span><select id="statusFilter">
           <option value="">Todos</option>
-          <option value="En Desarrollo">En Desarrollo</option>
+          <option value="En desarrollo">En desarrollo</option>
           <option value="Entregado para Contratación">Entregado para Contratación</option>
-          <option value="Remitido a otra Dirección">Remitido a otra Dirección</option>
-          <option value="No Iniciado">No Iniciado</option>
+          <option value="Remitido a otra dirección">Remitido a otra dirección</option>
+          <option value="No iniciado">No iniciado</option>
         </select></label>
         <label class="search-label"><span>&nbsp;</span><div class="search-input-wrap"><span class="search-ico">⌕</span><input id="search" type="search" placeholder="Buscar proyecto o parroquia..."></div></label>
         <button id="clearFilters" class="clear-btn" type="button">↻&nbsp; Limpiar filtros</button>
@@ -286,24 +286,28 @@ function parseCSV(text){
  return rows.map(r=>Object.fromEntries(headers.map((h,i)=>[h,r[i]??""])));
 }
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));}
-function amount(p){const n=Number(p.monto_num);return Number.isFinite(n)?n:0;}
+function amount(p){
+ const raw=String(p.monto??"").trim().replace(/\$/g,"").replace(/,/g,"");
+ const n=Number(raw);
+ return Number.isFinite(n)?n:0;
+}
 function moneyValue(n){return new Intl.NumberFormat("es-EC",{style:"currency",currency:"USD",minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);}
-function moneyCell(p){return amount(p)?new Intl.NumberFormat("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}).format(amount(p)):(p.monto||"—");}
+function moneyCell(p){
+ if(amount(p)>0){
+   return new Intl.NumberFormat("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}).format(amount(p));
+ }
+ return p.monto || "—";
+}
 function pct(n,total){return total?`${(n/total*100).toFixed(1)}% del total de proyectos`:"—";}
 function groupedStatus(p){
- const s=(p.estado_dashboard||"").trim();
- if(s==="En desarrollo"||s==="Por entregar")return "En Desarrollo";
- if(s==="Entregado a OOPP"||s==="Entregado / SERCOP")return "Entregado para Contratación";
- if(s==="Remitido a otra dirección"||s==="Gestión externa")return "Remitido a otra Dirección";
- if(s==="No iniciado"||s==="Sin estado registrado")return "No Iniciado";
- return "En Desarrollo";
+ return (p.estado_dashboard || "No iniciado").trim();
 }
-function displayCategory(v){return v==="Otros"?"Fuera del PAC":v;}
+function displayCategory(v){return v || "—";}
 function unique(field){return [...new Set(projects.map(p=>p[field]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"es"));}
 function fillSelect(el,vals){vals.forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v;el.appendChild(o);});}
 
 function renderKpis(){
- const total=projects.length,pac=projects.filter(p=>p.categoria==="PAC"),fuera=projects.filter(p=>p.categoria==="Otros"),
+ const total=projects.length,pac=projects.filter(p=>p.categoria==="PAC"),fuera=projects.filter(p=>p.categoria==="Fuera del PAC"),
        entregados=projects.filter(p=>groupedStatus(p)==="Entregado para Contratación");
  els.total.textContent=total;els.pac.textContent=pac.length;els.otros.textContent=fuera.length;els.oopp.textContent=entregados.length;
  els.moneyTotal.textContent=moneyValue(projects.reduce((s,p)=>s+amount(p),0));
@@ -339,7 +343,7 @@ Chart.register(valueLabelsPlugin);
 function renderCharts(){
  Chart.defaults.font.family='Arial, "Helvetica Neue", sans-serif';Chart.defaults.color="#344054";Chart.defaults.font.size=10;
 
- const pac=projects.filter(p=>p.categoria==="PAC").length,fuera=projects.filter(p=>p.categoria==="Otros").length;
+ const pac=projects.filter(p=>p.categoria==="PAC").length,fuera=projects.filter(p=>p.categoria==="Fuera del PAC").length;
  categoryChart?.destroy();
  categoryChart=new Chart($("#categoryChart"),{
   type:"doughnut",
@@ -347,8 +351,8 @@ function renderCharts(){
   options:{responsive:true,maintainAspectRatio:false,cutout:"52%",plugins:{legend:{position:"bottom",labels:{boxWidth:10,padding:12}},tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw} (${(c.raw/projects.length*100).toFixed(1)}%)`}}}}
  });
 
- const order=["En Desarrollo","Entregado para Contratación","Remitido a otra Dirección","No Iniciado"];
- const sc=Object.fromEntries(order.map(s=>[s,0]));projects.forEach(p=>sc[groupedStatus(p)]++);
+ const order=["En desarrollo","Entregado para Contratación","Remitido a otra dirección","No iniciado"];
+ const sc=Object.fromEntries(order.map(s=>[s,0]));projects.forEach(p=>{const s=groupedStatus(p);if(sc[s]!==undefined)sc[s]++;});
  statusChart?.destroy();
  statusChart=new Chart($("#statusChart"),{
   type:"bar",
@@ -412,7 +416,7 @@ function openParishInvestmentModal(parish){
      ${list.map((p,i)=>`
        <div class="project-invest-row">
          <div class="project-invest-name"><strong>${i+1}. ${esc(p.proyecto)}</strong></div>
-         <div class="project-invest-amount">${esc(moneyValue(amount(p)))}</div>
+         <div class="project-invest-amount">${esc(amount(p)>0?moneyValue(amount(p)):(p.monto||"Sin presupuesto"))}</div>
        </div>`).join("")}
    </div>`;
  els.parishModal.classList.add("open");els.parishModal.setAttribute("aria-hidden","false");document.body.style.overflow="hidden";
@@ -449,8 +453,17 @@ function detail(label,value,full=false){return `<div class="detail ${full?"full"
 function openModal(item){
  const p=projects.find(x=>String(x.item)===String(item));if(!p)return;
  els.modalContent.innerHTML=`<p class="modal-kicker">Proyecto ${esc(p.item)} · ${esc(displayCategory(p.categoria))}</p><h3 id="modalTitle">${esc(p.proyecto)}</h3><div class="detail-grid">
- ${detail("Parroquia",p.parroquia)}${detail("Monto",moneyValue(amount(p)))}${detail("Número de trámite",p.tramite)}${detail("Estado agrupado",groupedStatus(p))}
- ${detail("Fecha prevista / entrega",p.fecha_entrega)}${detail("Responsables",p.responsables,true)}${detail("Descripción / estado registrado",p.estado_original,true)}</div>`;
+ ${detail("Parroquia",p.parroquia)}
+ ${detail("Monto",amount(p)>0?moneyValue(amount(p)):(p.monto||"Sin información registrada"))}
+ ${detail("Número de trámite",p.tramite)}
+ ${detail("Estado",groupedStatus(p))}
+ ${detail("Fecha prevista / entrega",p.fecha_entrega)}
+ ${detail("Cronograma contractual",p.cronograma_contractual)}
+ ${detail("Avance",p.Avance!==""&&p.Avance!=null?`${p.Avance}%`:"Sin información registrada")}
+ ${detail("Coordenada X",p["Coordenadas X"])}
+ ${detail("Coordenada Y",p["Coordenadas Y"])}
+ ${detail("Responsables",p.responsables,true)}
+ ${detail("Descripción / estado registrado",p.estado_original,true)}</div>`;
  els.modal.classList.add("open");els.modal.setAttribute("aria-hidden","false");document.body.style.overflow="hidden";
 }
 function closeModal(){els.modal.classList.remove("open");els.modal.setAttribute("aria-hidden","true");document.body.style.overflow="";}
