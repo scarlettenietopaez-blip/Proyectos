@@ -9,9 +9,9 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIINfQ3yncrHtKIL8xQZ7FSkb7XerPvHfQ=" crossorigin="">
+  <script src="https://cdn.jsdelivr.net/npm/proj4@2.11.0/dist/proj4.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script src="https://cdn.jsdelivr.net/npm/proj4@2.11.0/dist/proj4.js"></script>
   <style>
     :root{
       --navy:#0d2a5b; --navy2:#123b78; --blue:#1e63d5; --red:#ef2b31; --green:#07964d;
@@ -172,7 +172,7 @@
       border-radius:10px;
       border:1px solid #dbe3ee;
       overflow:hidden;
-      background:#e9eef5;
+      background:#f7f9fc;
     }
     .project-marker{
       width:28px;
@@ -241,18 +241,28 @@
       overflow:hidden;
       background:#e9eef5;
     }
-    #projectsMap .leaflet-tile,
-    #projectsMap .leaflet-marker-icon,
-    #projectsMap .leaflet-marker-shadow{
-      max-width:none !important;
-      max-height:none !important;
+    
+
+  
+    #projectsMap .leaflet-overlay-pane svg{
+      shape-rendering:geometricPrecision;
     }
-    #projectsMap .leaflet-tile-container img{
-      width:256px;
-      height:256px;
-      max-width:none !important;
-      max-height:none !important;
+    .parish-name-label{
+      background:transparent;
+      border:0;
+      box-shadow:none;
+      color:#17345f;
+      font-size:10px;
+      font-weight:800;
+      text-align:center;
+      text-shadow:
+        -1px -1px 0 rgba(255,255,255,.85),
+         1px -1px 0 rgba(255,255,255,.85),
+        -1px  1px 0 rgba(255,255,255,.85),
+         1px  1px 0 rgba(255,255,255,.85);
+      white-space:nowrap;
     }
+    .leaflet-tooltip.parish-name-label:before{display:none}
 
   </style>
 </head>
@@ -319,7 +329,7 @@
       <div class="map-card-head">
         <div>
           <h2>LOCALIZACIÓN DE PROYECTOS POR PARROQUIA</h2>
-          <p>Polígonos parroquiales con 50% de opacidad. Los proyectos con coordenadas registradas se muestran con marcador y nombre visible.</p>
+          <p>Mapa vectorial autónomo. Las parroquias se muestran con colores diferenciados y 50% de opacidad; los proyectos con coordenadas registradas aparecen con marcador y nombre visible.</p>
         </div>
         <div id="mapProjectCount" class="map-empty-note">Cargando mapa…</div>
       </div>
@@ -561,23 +571,77 @@ function parishColor(name){
  return palette[Math.abs(hash)%palette.length];
 }
 
-function projectLatLng(p){
- let x=parseFloat(String(p["Coordenadas X"]??"").replace(",","."));
- let y=parseFloat(String(p["Coordenadas Y"]??"").replace(",","."));
- if(!Number.isFinite(x)||!Number.isFinite(y)) return null;
+function parseCoordinateEntries(raw){
+ const text=String(raw??"").trim();
+ if(!text) return [];
 
- // Si ya vienen en longitud/latitud WGS84
- if(Math.abs(x)<=180 && Math.abs(y)<=90) return [y,x];
+ const lines=text.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+ const entries=[];
+ let pendingLabel="";
 
- // Si vienen en UTM WGS84 / zona 17S (EPSG:32717), convertir a WGS84
- try{
-   proj4.defs("EPSG:32717","+proj=utm +zone=17 +south +datum=WGS84 +units=m +no_defs +type=crs");
-   const ll=proj4("EPSG:32717","WGS84",[x,y]);
-   return [ll[1],ll[0]];
- }catch(e){
-   console.warn("No se pudo convertir coordenada del proyecto:",p.proyecto,e);
-   return null;
+ if(lines.length===1){
+   const n=Number(lines[0].replace(",","."));
+   return Number.isFinite(n)?[{label:"",value:n}]:[];
  }
+
+ for(const line of lines){
+   const normalized=line.replace(",",".").trim();
+   const n=Number(normalized);
+
+   if(Number.isFinite(n)){
+     entries.push({label:pendingLabel,value:n});
+     pendingLabel="";
+   }else{
+     pendingLabel=line;
+   }
+ }
+ return entries;
+}
+
+function projectLocations(p){
+ const xs=parseCoordinateEntries(p["Coordenadas X"]);
+ const ys=parseCoordinateEntries(p["Coordenadas Y"]);
+ if(!xs.length || !ys.length) return [];
+
+ const locations=[];
+ const max=Math.max(xs.length,ys.length);
+
+ for(let i=0;i<max;i++){
+   const xEntry=xs[i], yEntry=ys[i];
+   if(!xEntry || !yEntry) continue;
+
+   let x=xEntry.value, y=yEntry.value;
+   if(!Number.isFinite(x)||!Number.isFinite(y)) continue;
+
+   const label=(xEntry.label||yEntry.label||`Ubicación ${i+1}`).trim();
+
+   // Protección para pares UTM ingresados accidentalmente al revés:
+   // X esperado ~ 700.000 y Y esperado ~ 9.800.000.
+   if(x>1000000 && y<1000000){
+     const tmp=x; x=y; y=tmp;
+   }
+
+   // Coordenadas geográficas WGS84.
+   if(Math.abs(x)<=180 && Math.abs(y)<=90){
+     locations.push({label,lat:y,lng:x});
+     continue;
+   }
+
+   // Coordenadas UTM WGS84 zona 17S.
+   try{
+     proj4.defs("EPSG:32717","+proj=utm +zone=17 +south +datum=WGS84 +units=m +no_defs +type=crs");
+     const ll=proj4("EPSG:32717","WGS84",[x,y]);
+     locations.push({label,lat:ll[1],lng:ll[0]});
+   }catch(e){
+     console.warn("No se pudo convertir coordenada:",p.proyecto,label,e);
+   }
+ }
+ return locations;
+}
+
+function projectLatLng(p){
+ const locs=projectLocations(p);
+ return locs.length?[locs[0].lat,locs[0].lng]:null;
 }
 
 async function renderProjectMap(){
@@ -588,20 +652,14 @@ async function renderProjectMap(){
      zoomControl:true,
      preferCanvas:true,
      zoomSnap:.25,
-     zoomDelta:.5
+     zoomDelta:.5,
+     attributionControl:false,
+     minZoom:7,
+     maxZoom:18
    });
 
-   const baseLayer=L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
-     maxZoom:19,
-     minZoom:3,
-     attribution:'&copy; OpenStreetMap contributors',
-     updateWhenIdle:false,
-     updateWhenZooming:false,
-     keepBuffer:6,
-     crossOrigin:true
-   });
-
-   baseLayer.addTo(projectsMap);
+   // Mapa vectorial autónomo: no se cargan teselas externas.
+   // El fondo, parroquias y proyectos dependen solo de los archivos del repositorio.
    projectMarkersLayer=L.layerGroup().addTo(projectsMap);
 
    // Leaflet debe recalcular su tamaño cuando el Dashboard termina de maquetarse.
@@ -644,20 +702,40 @@ async function renderProjectMap(){
        legendItems.set(name,color);
        return {
          color:"#ffffff",
-         weight:1.2,
-         opacity:.95,
+         weight:1.4,
+         opacity:1,
          fillColor:color,
          fillOpacity:.50
        };
      },
      onEachFeature:(feature,layer)=>{
        const name=feature.properties?.nombre_mapa || feature.properties?.nombre || feature.properties?.nombre_1 || "Sin nombre";
+
+       // Nombre visible de la parroquia.
        layer.bindTooltip(name,{
-         sticky:true,
+         permanent:true,
          direction:"center",
-         className:"project-label"
+         className:"parish-name-label",
+         opacity:1
        });
+
        layer.bindPopup(`<strong>${esc(name)}</strong><br>Parroquia del cantón Riobamba`);
+
+       layer.on({
+         mouseover:e=>{
+           e.target.setStyle({
+             weight:2.2,
+             color:"#0d2a5b",
+             fillOpacity:.62
+           });
+           if(!L.Browser.ie && !L.Browser.opera && !L.Browser.edge){
+             e.target.bringToFront();
+           }
+         },
+         mouseout:e=>{
+           parishesLayer.resetStyle(e.target);
+         }
+       });
      }
    }).addTo(projectsMap);
 
@@ -665,39 +743,48 @@ async function renderProjectMap(){
    let markers=0;
 
    projects.forEach((p,i)=>{
-     const latlng=projectLatLng(p);
-     if(!latlng) return;
-     markers++;
+     const locations=projectLocations(p);
+     if(!locations.length) return;
 
      const color=projectColor(i);
-     const icon=L.divIcon({
-       className:"",
-       iconSize:[28,28],
-       iconAnchor:[14,28],
-       popupAnchor:[0,-28],
-       html:`<div class="project-marker" style="background:${color}"><span>${esc(p.item||i+1)}</span></div>`
+
+     locations.forEach((loc,locIndex)=>{
+       markers++;
+
+       const icon=L.divIcon({
+         className:"",
+         iconSize:[28,28],
+         iconAnchor:[14,28],
+         popupAnchor:[0,-28],
+         html:`<div class="project-marker" style="background:${color}"><span>${esc(p.item||i+1)}</span></div>`
+       });
+
+       const marker=L.marker([loc.lat,loc.lng],{icon}).addTo(projectMarkersLayer);
+
+       const visibleName=locations.length>1
+         ? `${p.proyecto} · ${loc.label}`
+         : p.proyecto;
+
+       marker.bindTooltip(esc(visibleName),{
+         permanent:true,
+         direction:"right",
+         offset:[12,-14],
+         className:"project-label",
+         opacity:1
+       });
+
+       marker.bindPopup(`
+         <div style="min-width:230px">
+           <strong style="color:#0d2a5b">${esc(p.proyecto)}</strong><br>
+           ${locations.length>1?`<span><b>Ubicación:</b> ${esc(loc.label)}</span><br>`:""}
+           <span><b>Parroquia:</b> ${esc(p.parroquia||"—")}</span><br>
+           <span><b>Categoría:</b> ${esc(displayCategory(p.categoria))}</span><br>
+           <span><b>Estado:</b> ${esc(groupedStatus(p))}</span><br>
+           <span><b>Monto:</b> ${esc(amount(p)>0?moneyValue(amount(p)):(p.monto||"—"))}</span><br>
+           <span><b>Avance:</b> ${esc(p.Avance!==""&&p.Avance!=null?`${Number(p.Avance)<=1?Math.round(Number(p.Avance)*100):p.Avance}%`:"—")}</span>
+         </div>
+       `);
      });
-
-     const marker=L.marker(latlng,{icon}).addTo(projectMarkersLayer);
-
-     marker.bindTooltip(esc(p.proyecto),{
-       permanent:true,
-       direction:"right",
-       offset:[12,-14],
-       className:"project-label",
-       opacity:1
-     });
-
-     marker.bindPopup(`
-       <div style="min-width:230px">
-         <strong style="color:#0d2a5b">${esc(p.proyecto)}</strong><br>
-         <span><b>Parroquia:</b> ${esc(p.parroquia||"—")}</span><br>
-         <span><b>Categoría:</b> ${esc(displayCategory(p.categoria))}</span><br>
-         <span><b>Estado:</b> ${esc(groupedStatus(p))}</span><br>
-         <span><b>Monto:</b> ${esc(amount(p)>0?moneyValue(amount(p)):(p.monto||"—"))}</span><br>
-         <span><b>Avance:</b> ${esc(p.Avance!==""&&p.Avance!=null?`${p.Avance}%`:"—")}</span>
-       </div>
-     `);
    });
 
    const bounds=parishesLayer.getBounds();
@@ -707,13 +794,13 @@ async function renderProjectMap(){
      requestAnimationFrame(()=>{
        projectsMap.fitBounds(bounds.pad(.04),{
          animate:false,
-         padding:[18,18]
+         padding:[28,28]
        });
        setTimeout(()=>{
          projectsMap.invalidateSize({pan:false,animate:false});
          projectsMap.fitBounds(bounds.pad(.04),{
            animate:false,
-           padding:[18,18]
+           padding:[28,28]
          });
        },180);
      });
@@ -737,7 +824,7 @@ async function renderProjectMap(){
    const countEl=document.getElementById("mapProjectCount");
    if(countEl){
      countEl.textContent=markers
-       ? `${markers} proyecto${markers===1?"":"s"} con coordenadas`
+       ? `${markers} ubicación${markers===1?"":"es"} georreferenciada${markers===1?"":"s"}`
        : "Aún no hay proyectos con coordenadas registradas";
    }
 
