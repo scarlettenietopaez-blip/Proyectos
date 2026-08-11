@@ -232,6 +232,28 @@
       .map-card-head{flex-direction:column}
     }
 
+  
+    /* CORRECCIÓN DE RENDERIZADO LEAFLET */
+    #projectsMap.leaflet-container{
+      position:relative;
+      width:100%;
+      height:560px;
+      overflow:hidden;
+      background:#e9eef5;
+    }
+    #projectsMap .leaflet-tile,
+    #projectsMap .leaflet-marker-icon,
+    #projectsMap .leaflet-marker-shadow{
+      max-width:none !important;
+      max-height:none !important;
+    }
+    #projectsMap .leaflet-tile-container img{
+      width:256px;
+      height:256px;
+      max-width:none !important;
+      max-height:none !important;
+    }
+
   </style>
 </head>
 <body>
@@ -562,12 +584,48 @@ async function renderProjectMap(){
  if(!document.getElementById("projectsMap")) return;
 
  if(!projectsMap){
-   projectsMap=L.map("projectsMap",{zoomControl:true,preferCanvas:true});
-   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
-     maxZoom:20,
-     attribution:'&copy; OpenStreetMap contributors'
-   }).addTo(projectsMap);
+   projectsMap=L.map("projectsMap",{
+     zoomControl:true,
+     preferCanvas:true,
+     zoomSnap:.25,
+     zoomDelta:.5
+   });
+
+   const baseLayer=L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+     maxZoom:19,
+     minZoom:3,
+     attribution:'&copy; OpenStreetMap contributors',
+     updateWhenIdle:false,
+     updateWhenZooming:false,
+     keepBuffer:6,
+     crossOrigin:true
+   });
+
+   baseLayer.addTo(projectsMap);
    projectMarkersLayer=L.layerGroup().addTo(projectsMap);
+
+   // Leaflet debe recalcular su tamaño cuando el Dashboard termina de maquetarse.
+   const refreshMapSize=()=>{
+     if(!projectsMap) return;
+     projectsMap.invalidateSize({pan:false,animate:false});
+   };
+
+   requestAnimationFrame(()=>{
+     refreshMapSize();
+     setTimeout(refreshMapSize,120);
+     setTimeout(refreshMapSize,450);
+   });
+
+   window.addEventListener("load",()=>setTimeout(refreshMapSize,150));
+   window.addEventListener("resize",()=>setTimeout(refreshMapSize,80));
+
+   if("ResizeObserver" in window){
+     const mapResizeObserver=new ResizeObserver(()=>{
+       requestAnimationFrame(refreshMapSize);
+     });
+     mapResizeObserver.observe(document.getElementById("projectsMap"));
+     projectsMap._resizeObserver=mapResizeObserver;
+   }
  }
 
  try{
@@ -643,7 +701,23 @@ async function renderProjectMap(){
    });
 
    const bounds=parishesLayer.getBounds();
-   if(bounds.isValid()) projectsMap.fitBounds(bounds.pad(.04));
+   if(bounds.isValid()){
+     // Primero recalculamos el tamaño real del contenedor y después ajustamos a Riobamba.
+     projectsMap.invalidateSize({pan:false,animate:false});
+     requestAnimationFrame(()=>{
+       projectsMap.fitBounds(bounds.pad(.04),{
+         animate:false,
+         padding:[18,18]
+       });
+       setTimeout(()=>{
+         projectsMap.invalidateSize({pan:false,animate:false});
+         projectsMap.fitBounds(bounds.pad(.04),{
+           animate:false,
+           padding:[18,18]
+         });
+       },180);
+     });
+   }
 
    // Leyenda parroquial
    if(projectsMap._parishLegend) projectsMap.removeControl(projectsMap._parishLegend);
@@ -667,7 +741,8 @@ async function renderProjectMap(){
        : "Aún no hay proyectos con coordenadas registradas";
    }
 
-   setTimeout(()=>projectsMap.invalidateSize(),100);
+   setTimeout(()=>projectsMap.invalidateSize({pan:false,animate:false}),120);
+   setTimeout(()=>projectsMap.invalidateSize({pan:false,animate:false}),500);
  }catch(err){
    console.error(err);
    const countEl=document.getElementById("mapProjectCount");
