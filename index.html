@@ -293,6 +293,26 @@
       font-size:10px;
     }
 
+  
+    /* V10.1 - CORRECCIÓN DEFINITIVA DE TESELAS LEAFLET */
+    #projectsMap.leaflet-container{
+      position:relative;
+      overflow:hidden;
+    }
+    #projectsMap .leaflet-tile,
+    #projectsMap .leaflet-marker-icon,
+    #projectsMap .leaflet-marker-shadow{
+      max-width:none !important;
+      max-height:none !important;
+    }
+    #projectsMap .leaflet-tile-container img.leaflet-tile{
+      width:256px !important;
+      height:256px !important;
+      max-width:none !important;
+      max-height:none !important;
+      object-fit:none !important;
+    }
+
   </style>
 </head>
 <body>
@@ -689,7 +709,7 @@ async function renderProjectMap(){
 
    // Mapa base claro, pensado para que los polígonos y proyectos sean protagonistas.
    const cartoLight=L.tileLayer(
-     "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+     "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
      {
        subdomains:"abcd",
        maxZoom:20,
@@ -699,6 +719,10 @@ async function renderProjectMap(){
        keepBuffer:5
      }
    ).addTo(projectsMap);
+
+   cartoLight.on("load",()=>{
+     setTimeout(()=>projectsMap.invalidateSize({pan:false,animate:false}),60);
+   });
 
    // Segunda alternativa disponible desde el control de capas.
    const osmBase=L.tileLayer(
@@ -714,6 +738,18 @@ async function renderProjectMap(){
 
    // Capa de proyectos separada y siempre por encima de las parroquias.
    projectMarkersLayer=L.layerGroup().addTo(projectsMap);
+
+
+   let cartoTileErrors=0;
+   cartoLight.on("tileerror",()=>{
+     cartoTileErrors++;
+     if(cartoTileErrors===6 && projectsMap.hasLayer(cartoLight)){
+       console.warn("CARTO no está respondiendo correctamente; cambiando a OpenStreetMap.");
+       projectsMap.removeLayer(cartoLight);
+       osmBase.addTo(projectsMap);
+       setTimeout(()=>projectsMap.invalidateSize({pan:false,animate:false}),80);
+     }
+   });
 
    const baseMaps={
      "Mapa claro":cartoLight,
@@ -754,7 +790,7 @@ async function renderProjectMap(){
 
    const legendItems=new Map();
 
-   parishesLayer=L.geoJSON(gj,{pane:"parroquiasPane",
+   parishesLayer=L.geoJSON(gj,{
      style:feature=>{
        const name=feature.properties?.nombre_mapa || feature.properties?.nombre || feature.properties?.nombre_1 || "Sin nombre";
        const color=parishColor(name);
@@ -797,6 +833,9 @@ async function renderProjectMap(){
        });
      }
    }).addTo(projectsMap);
+
+   // Polígonos detrás de marcadores y etiquetas.
+   if(parishesLayer.bringToBack) parishesLayer.bringToBack();
 
    projectMarkersLayer.clearLayers();
    let markers=0;
@@ -916,6 +955,11 @@ async function renderProjectMap(){
 
    setTimeout(()=>projectsMap.invalidateSize({pan:false,animate:false}),120);
    setTimeout(()=>projectsMap.invalidateSize({pan:false,animate:false}),500);
+   setTimeout(()=>{
+     projectsMap.invalidateSize({pan:false,animate:false});
+     if(cartoLight.redraw) cartoLight.redraw();
+     if(osmBase.redraw) osmBase.redraw();
+   },900);
  }catch(err){
    console.error(err);
    const countEl=document.getElementById("mapProjectCount");
