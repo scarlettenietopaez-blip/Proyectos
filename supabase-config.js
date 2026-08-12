@@ -1,7 +1,7 @@
 // CONFIGURACIÓN PÚBLICA DEL FRONTEND
-// La publishable key puede usarse en navegador SIEMPRE que RLS esté configurado.
-// NUNCA coloque aquí una secret key / service_role key.
+// Publishable key: apta para navegador siempre que RLS esté activo.
+// NO colocar aquí secret key ni service_role.
 window.SUPABASE_CONFIG = {
-  url: "PEGAR_SUPABASE_PROJECT_URL",
-  publishableKey: "PEGAR_SUPABASE_PUBLISHABLE_KEY"
+  url: "https://vpihwoyucfkqocytmfbn.supabase.co",
+  publishableKey: "sb_publishable_OBZbkKmVFjNIw7NFAT-9Yw_Dek3133m"
 };
