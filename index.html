@@ -9,6 +9,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./supabase-config.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.7/build/pannellum.css">
+  <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.7/build/pannellum.js"></script>
   <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/proj4@2.11.0/dist/proj4.js"></script>
@@ -375,6 +377,250 @@
       .matrix-header{flex-direction:column}
     }
 
+  
+    /* =========================================================
+       V14 - MATRIZ VISUAL + MAPA + MULTIMEDIA
+       ========================================================= */
+    .matrix-card{overflow:hidden}
+    .matrix-toolbar{
+      display:grid;
+      grid-template-columns:1fr 1fr 1fr 1.7fr auto;
+      gap:14px;
+      align-items:end;
+      padding:14px 16px 16px;
+      background:#fff;
+      border-bottom:1px solid #dce3ed;
+    }
+    .matrix-toolbar label{
+      display:grid;
+      gap:6px;
+      color:#23385d;
+      font-size:11px;
+      font-weight:700;
+    }
+    .matrix-toolbar select,
+    .matrix-toolbar input{
+      height:38px;
+      border:1px solid #cfd8e6;
+      border-radius:6px;
+      background:#fff;
+      padding:0 11px;
+      color:#344054;
+      font:inherit;
+      outline:none;
+    }
+    .matrix-clear{height:38px}
+    .matrix-scroll{
+      overflow:auto;
+      max-height:none;
+    }
+    .matrix-table{
+      min-width:1420px;
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      font-size:10px;
+    }
+    .matrix-table th{
+      position:sticky;
+      top:0;
+      z-index:2;
+      background:#14396f;
+      color:#fff;
+      padding:11px 10px;
+      text-align:left;
+      white-space:nowrap;
+      font-size:9px;
+      text-transform:uppercase;
+    }
+    .matrix-table td{
+      padding:10px;
+      border-right:1px solid #dce3ed;
+      border-bottom:1px solid #dce3ed;
+      vertical-align:middle;
+      color:#243753;
+      background:#fff;
+    }
+    .matrix-table tbody tr:hover td{background:#f8faff}
+    .matrix-project{
+      min-width:265px;
+      max-width:340px;
+      font-weight:700;
+      color:#12325f;
+      line-height:1.35;
+    }
+    .matrix-description{
+      min-width:330px;
+      max-width:420px;
+      line-height:1.35;
+    }
+    .matrix-status-pill{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:112px;
+      padding:6px 9px;
+      border-radius:4px;
+      background:#0d2a5b;
+      color:#fff;
+      font-weight:800;
+      line-height:1.15;
+    }
+    .matrix-status-pill[data-status="Entregado para Contratación"]{background:#078744}
+    .matrix-status-pill[data-status="Remitido a otra dirección"]{background:#2a67c7}
+    .matrix-status-pill[data-status="No iniciado"]{background:#9a2020}
+    .matrix-category{
+      display:inline-flex;
+      padding:6px 10px;
+      border-radius:4px;
+      background:#2466cf;
+      color:#fff;
+      font-weight:800;
+    }
+    .matrix-actions-cell{
+      min-width:225px;
+      white-space:nowrap;
+    }
+    .row-action{
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      padding:5px 6px;
+      border:0;
+      background:transparent;
+      color:#1557b0;
+      font-size:10px;
+      font-weight:800;
+      cursor:pointer;
+    }
+    .row-action.map{color:#08793e}
+    .row-action.delete{color:#b42318}
+    .row-action:disabled{opacity:.4;cursor:not-allowed}
+    .matrix-pagination{
+      display:grid;
+      grid-template-columns:1fr auto 1fr;
+      align-items:center;
+      padding:11px 16px;
+      color:#667085;
+      font-size:10px;
+      background:#fff;
+    }
+    .matrix-page-buttons{display:flex;gap:5px;justify-content:center}
+    .matrix-page-button{
+      min-width:31px;
+      height:29px;
+      border:1px solid #d3dbe7;
+      background:#fff;
+      color:#35425a;
+      border-radius:4px;
+      cursor:pointer;
+    }
+    .matrix-page-button.active{background:#0d2a5b;color:#fff;border-color:#0d2a5b}
+    .matrix-page-size{justify-self:end;display:flex;align-items:center;gap:7px}
+    .matrix-page-size select{height:29px;border:1px solid #cfd8e6;border-radius:4px;background:#fff}
+
+    .media-manager{
+      grid-column:1/-1;
+      border-top:1px solid #e1e7ef;
+      margin-top:6px;
+      padding-top:16px;
+    }
+    .media-manager h4{margin:0 0 5px;color:#0d2a5b;font-size:13px}
+    .media-help{margin:0 0 12px;color:#667085;font-size:10px;line-height:1.45}
+    .media-upload-grid{
+      display:grid;
+      grid-template-columns:180px 1fr 1.4fr auto;
+      gap:9px;
+      align-items:end;
+    }
+    .media-list{display:grid;gap:8px;margin-top:13px}
+    .media-item{
+      display:grid;
+      grid-template-columns:54px 1fr auto;
+      gap:10px;
+      align-items:center;
+      padding:8px;
+      border:1px solid #e1e7ef;
+      border-radius:8px;
+      background:#f9fbfd;
+    }
+    .media-thumb{
+      width:54px;height:44px;border-radius:5px;object-fit:cover;background:#e8edf4;
+      display:grid;place-items:center;color:#52627c;font-size:10px;font-weight:700;
+    }
+    .media-meta strong{display:block;color:#243753;font-size:10px}
+    .media-meta span{display:block;color:#7b8495;font-size:9px;margin-top:2px}
+    .media-tools{display:flex;gap:5px}
+    .media-tool{
+      border:0;background:#fff;color:#1557b0;font-size:10px;font-weight:800;
+      cursor:pointer;padding:5px 7px;border-radius:5px
+    }
+    .media-tool.delete{color:#b42318}
+
+    .media-viewer{display:none;position:fixed;inset:0;z-index:2600}
+    .media-viewer.open{display:block}
+    .media-viewer-backdrop{position:absolute;inset:0;background:rgba(5,18,41,.82)}
+    .media-viewer-card{
+      position:relative;
+      width:min(1120px,calc(100% - 30px));
+      height:min(760px,calc(100vh - 30px));
+      margin:15px auto;
+      background:#fff;
+      border-radius:12px;
+      overflow:hidden;
+      box-shadow:0 30px 100px rgba(0,0,0,.42);
+      display:flex;
+      flex-direction:column;
+    }
+    .media-viewer-head{
+      display:flex;justify-content:space-between;align-items:center;gap:15px;
+      padding:12px 15px;border-bottom:1px solid #e1e7ef;
+    }
+    .media-viewer-head strong{color:#0d2a5b}
+    .media-viewer-close{border:0;background:transparent;font-size:28px;color:#667085;cursor:pointer}
+    .media-viewer-body{flex:1;min-height:0;background:#101828;display:grid;place-items:center}
+    .media-viewer-body img{max-width:100%;max-height:100%;object-fit:contain}
+    .media-viewer-body video{width:100%;height:100%;object-fit:contain;background:#000}
+    .media-viewer-body iframe{width:100%;height:100%;border:0;background:#fff}
+    #panorama360{width:100%;height:100%}
+
+    .map-media-preview{
+      margin-top:9px;
+      border-top:1px solid #e1e7ef;
+      padding-top:8px;
+    }
+    .map-media-img{
+      width:220px;
+      max-width:100%;
+      height:110px;
+      object-fit:cover;
+      border-radius:7px;
+      display:block;
+      margin-bottom:7px;
+    }
+    .map-media-buttons{display:flex;flex-wrap:wrap;gap:5px}
+    .map-media-btn{
+      border:1px solid #cbd7e8;
+      background:#fff;
+      color:#1557b0;
+      border-radius:5px;
+      font-size:9px;
+      font-weight:800;
+      padding:5px 7px;
+      cursor:pointer;
+    }
+
+    @media(max-width:1100px){
+      .matrix-toolbar{grid-template-columns:1fr 1fr}
+      .matrix-clear{justify-self:start}
+      .media-upload-grid{grid-template-columns:1fr 1fr}
+    }
+    @media(max-width:680px){
+      .matrix-toolbar,.media-upload-grid{grid-template-columns:1fr}
+      .matrix-pagination{grid-template-columns:1fr;gap:8px;text-align:center}
+      .matrix-page-size{justify-self:center}
+    }
+
   </style>
 </head>
 <body>
@@ -530,22 +776,60 @@
 
     <div id="matrixDataPanel" class="matrix-card" hidden>
       <div class="matrix-toolbar">
-        <input id="matrixSearch" class="matrix-search" type="search" placeholder="Buscar en toda la matriz…">
-        <span id="matrixRecordCount" class="connection-badge online">0 proyectos</span>
-        <button id="matrixRefreshBtn" class="matrix-btn" type="button">↻ Actualizar</button>
+        <label>Categoría
+          <select id="matrixCategoryFilter">
+            <option value="">Todas</option>
+            <option value="PAC">PAC</option>
+            <option value="Fuera del PAC">Fuera del PAC</option>
+          </select>
+        </label>
+        <label>Parroquia
+          <select id="matrixParishFilter"><option value="">Todas</option></select>
+        </label>
+        <label>Estado
+          <select id="matrixStatusFilter">
+            <option value="">Todos</option>
+            <option value="En desarrollo">En desarrollo</option>
+            <option value="Entregado para Contratación">Entregado para Contratación</option>
+            <option value="Remitido a otra dirección">Remitido a otra dirección</option>
+            <option value="No iniciado">No iniciado</option>
+          </select>
+        </label>
+        <label>Buscar
+          <input id="matrixSearch" type="search" placeholder="Buscar proyecto o parroquia…">
+        </label>
+        <button id="matrixClearBtn" class="matrix-btn matrix-clear" type="button">↻ Limpiar filtros</button>
       </div>
       <div class="matrix-scroll">
         <table class="matrix-table">
           <thead>
             <tr>
-              <th>Item</th><th>Categoría</th><th>Parroquia</th><th>Proyecto</th><th>Monto</th>
-              <th>Trámite</th><th>Responsables</th><th>Descripción</th><th>Estado</th>
-              <th>Fecha entrega</th><th>Cronograma contractual</th><th>Avance</th>
-              <th>Coordenadas X</th><th>Coordenadas Y</th><th>Acciones</th>
+              <th>N°</th>
+              <th>Proyecto</th>
+              <th>Parroquia</th>
+              <th>Categoría</th>
+              <th>Monto (USD)</th>
+              <th>Descripción</th>
+              <th>Estado</th>
+              <th>Fecha prevista</th>
+              <th>Avance</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody id="matrixBody"></tbody>
         </table>
+      </div>
+      <div class="matrix-pagination">
+        <span id="matrixRangeLabel">Mostrando 0 proyectos</span>
+        <div id="matrixPagination" class="matrix-page-buttons"></div>
+        <label class="matrix-page-size">Mostrar
+          <select id="matrixPageSize">
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="9999">Todos</option>
+          </select>
+        </label>
       </div>
     </div>
   </section>
@@ -571,6 +855,12 @@ const COLORS={navy:"#0d2a5b",blue:"#1e63d5",red:"#ef2b31",green:"#07964d",yellow
 const PALETTE=[COLORS.navy,COLORS.red,COLORS.green,COLORS.yellow,COLORS.purple,COLORS.cyan,COLORS.orange,COLORS.blue,"#6d7789","#9b5de5","#00a8a8","#c97b29"];
 
 let projects=[],currentPage=1,pageSize=10;
+let projectMapInstance=null;
+let projectMapReady=false;
+let matrixCurrentPage=1;
+let matrixPageSize=10;
+let currentProjectMedia=[];
+let panoramaViewerInstance=null;
 
 let categoryChart,statusChart,parishChart,parishMoneyChart;
 
@@ -860,6 +1150,7 @@ async function renderProjectMap(){
          type:"Feature",
          geometry:{type:"Point",coordinates:[loc.lng,loc.lat]},
          properties:{
+           project_id:String(p.id??""),
            item:String(p.item??i+1),
            proyecto:p.proyecto||"",
            ubicacion:locs.length>1?loc.label:"",
@@ -877,7 +1168,7 @@ async function renderProjectMap(){
 
    const projectGeo={type:"FeatureCollection",features:pointFeatures};
 
-   const map=new maplibregl.Map({
+   projectMapInstance=new maplibregl.Map({
      container:"projectsMap",
      style:{
        version:8,
@@ -900,9 +1191,11 @@ async function renderProjectMap(){
      attributionControl:true
    });
 
+   const map=projectMapInstance;
    map.addControl(new maplibregl.NavigationControl(),"top-right");
 
    map.on("load",()=>{
+     projectMapReady=true;
      map.resize();
      setTimeout(()=>map.resize(),100);
      setTimeout(()=>map.resize(),400);
@@ -1027,12 +1320,14 @@ async function renderProjectMap(){
      }
    });
 
-   map.on("click","proyectos-circle",e=>{
+   map.on("click","proyectos-circle",async e=>{
      const f=e.features?.[0];
      if(!f) return;
      const p=f.properties;
+     const media=await getProjectMedia(p.project_id);
+
      const htmlPopup=`
-       <div style="min-width:240px">
+       <div style="min-width:250px">
          <strong>${esc(p.proyecto)}</strong><br>
          ${p.ubicacion?`<span><b>Ubicación:</b> ${esc(p.ubicacion)}</span><br>`:""}
          <span><b>Parroquia:</b> ${esc(p.parroquia||"—")}</span><br>
@@ -1040,11 +1335,15 @@ async function renderProjectMap(){
          <span><b>Estado:</b> ${esc(p.estado||"—")}</span><br>
          <span><b>Monto:</b> ${esc(p.monto||"—")}</span><br>
          <span><b>Avance:</b> ${esc(p.avance||"—")}</span>
+         ${buildMapMediaHtml(media)}
        </div>`;
-     new maplibregl.Popup({closeButton:true,offset:12})
+
+     const popup=new maplibregl.Popup({closeButton:true,offset:12})
        .setLngLat(f.geometry.coordinates)
        .setHTML(htmlPopup)
        .addTo(map);
+
+     setTimeout(()=>wirePopupMedia(popup,media),0);
    });
 
    map.on("mouseenter","proyectos-circle",()=>map.getCanvas().style.cursor="pointer");
@@ -1261,6 +1560,21 @@ function openCrud(row=null){
  setFormFromRow(row);
  document.getElementById("crudTitle").textContent=row?"Editar proyecto":"Agregar proyecto";
  document.getElementById("crudStatus").textContent="";
+
+ const unsaved=document.getElementById("mediaUnsavedNote");
+ const controls=document.getElementById("mediaUploadControls");
+ if(row?.id){
+   unsaved.hidden=true;
+   controls.hidden=false;
+   loadProjectMedia(row.id);
+ }else{
+   currentProjectMedia=[];
+   unsaved.hidden=false;
+   controls.hidden=true;
+   const list=document.getElementById("mediaList");
+   if(list) list.innerHTML="";
+ }
+
  const modal=document.getElementById("crudModal");
  modal.classList.add("open");
  modal.setAttribute("aria-hidden","false");
@@ -1312,8 +1626,20 @@ async function saveProject(evt){
 
 async function deleteProject(id,projectName){
  if(!dbReady || !currentSession) return;
- const ok=confirm(`¿Eliminar definitivamente el proyecto?\n\n${projectName}\n\nEsta acción no se puede deshacer.`);
+ const ok=confirm(`¿Eliminar definitivamente el proyecto?\n\n${projectName}\n\nTambién se eliminarán sus archivos multimedia. Esta acción no se puede deshacer.`);
  if(!ok) return;
+
+ const media=await getProjectMedia(id);
+ if(media.length){
+   const paths=media.map(m=>m.storage_path).filter(Boolean);
+   if(paths.length){
+     const {error:storageError}=await dbClient.storage.from("project-media").remove(paths);
+     if(storageError){
+       alert(`No se pudieron eliminar los archivos del proyecto: ${storageError.message}`);
+       return;
+     }
+   }
+ }
 
  const {error}=await dbClient.from("proyectos").delete().eq("id",id);
  if(error){
@@ -1329,61 +1655,397 @@ async function afterDatabaseChange(){
  renderCharts();
  renderTable();
  renderMatrix();
- if(document.getElementById("projectsMap")){
-   // El mapa actual no permite cambiar las fuentes sin referencia global;
-   // recargamos la página solo si la vista del mapa está activa.
-   // Los demás datos se actualizan inmediatamente.
+
+ if(projectMapInstance && projectMapReady && projectMapInstance.getSource("proyectos")){
+   const pointFeatures=[];
+   projects.forEach((p,i)=>{
+     const locs=projectLocations(p);
+     locs.forEach(loc=>{
+       pointFeatures.push({
+         type:"Feature",
+         geometry:{type:"Point",coordinates:[loc.lng,loc.lat]},
+         properties:{
+           project_id:String(p.id??""),
+           item:String(p.item??i+1),
+           proyecto:p.proyecto||"",
+           ubicacion:locs.length>1?loc.label:"",
+           parroquia:p.parroquia||"",
+           categoria:displayCategory(p.categoria),
+           estado:groupedStatus(p),
+           monto:amount(p)>0?moneyValue(amount(p)):(p.monto||"—"),
+           avance:(p.Avance!==""&&p.Avance!=null)?`${p.Avance}%`:"—"
+         }
+       });
+     });
+   });
+   projectMapInstance.getSource("proyectos").setData({type:"FeatureCollection",features:pointFeatures});
  }
 }
+
+
+function mediaPublicUrl(path){
+ if(!dbClient || !path) return "";
+ const {data}=dbClient.storage.from("project-media").getPublicUrl(path);
+ return data?.publicUrl||"";
+}
+
+async function getProjectMedia(projectId){
+ if(!dbReady || !projectId) return [];
+ const {data,error}=await dbClient
+   .from("project_media")
+   .select("*")
+   .eq("project_id",projectId)
+   .order("created_at",{ascending:true});
+ if(error){
+   console.warn("project_media:",error);
+   return [];
+ }
+ return data||[];
+}
+
+function mediaIcon(type){
+ return type==="image"?"IMG":type==="pdf"?"PDF":type==="video"?"MP4":"360°";
+}
+
+function buildMapMediaHtml(media){
+ if(!media?.length) return "";
+ const firstImage=media.find(m=>m.media_type==="image");
+ const preview=firstImage
+   ? `<img class="map-media-img" src="${esc(mediaPublicUrl(firstImage.storage_path))}" alt="${esc(firstImage.title||"Imagen del proyecto")}">`
+   : "";
+ const buttons=media.slice(0,6).map(m=>
+   `<button class="map-media-btn" type="button" data-popup-media="${m.id}">${mediaIcon(m.media_type)} ${esc(m.title||"Abrir")}</button>`
+ ).join("");
+ return `<div class="map-media-preview">${preview}<div class="map-media-buttons">${buttons}</div></div>`;
+}
+
+function wirePopupMedia(popup,media){
+ const el=popup?.getElement?.();
+ if(!el) return;
+ el.querySelectorAll("[data-popup-media]").forEach(btn=>{
+   btn.addEventListener("click",()=>{
+     const record=media.find(m=>String(m.id)===String(btn.dataset.popupMedia));
+     if(record) openMediaViewer(record);
+   });
+ });
+}
+
+function openMediaViewer(record){
+ const viewer=document.getElementById("mediaViewer");
+ const body=document.getElementById("mediaViewerBody");
+ const title=document.getElementById("mediaViewerTitle");
+ if(!viewer||!body) return;
+
+ const url=mediaPublicUrl(record.storage_path);
+ title.textContent=record.title||"Archivo del proyecto";
+ body.innerHTML="";
+
+ if(panoramaViewerInstance){
+   try{panoramaViewerInstance.destroy();}catch(e){}
+   panoramaViewerInstance=null;
+ }
+
+ if(record.media_type==="image"){
+   body.innerHTML=`<img src="${esc(url)}" alt="${esc(record.title||"Imagen")}">`;
+ }else if(record.media_type==="pdf"){
+   body.innerHTML=`<iframe src="${esc(url)}" title="${esc(record.title||"PDF")}"></iframe>`;
+ }else if(record.media_type==="video"){
+   body.innerHTML=`<video src="${esc(url)}" controls autoplay playsinline></video>`;
+ }else if(record.media_type==="tour360"){
+   body.innerHTML='<div id="panorama360"></div>';
+   if(window.pannellum){
+     panoramaViewerInstance=pannellum.viewer("panorama360",{
+       type:"equirectangular",
+       panorama:url,
+       autoLoad:true,
+       showControls:true,
+       title:record.title||"Recorrido 360°"
+     });
+   }else{
+     body.innerHTML=`<img src="${esc(url)}" alt="${esc(record.title||"Panorama 360°")}">`;
+   }
+ }
+
+ viewer.classList.add("open");
+ viewer.setAttribute("aria-hidden","false");
+ document.body.style.overflow="hidden";
+}
+
+function closeMediaViewer(){
+ const viewer=document.getElementById("mediaViewer");
+ viewer?.classList.remove("open");
+ viewer?.setAttribute("aria-hidden","true");
+ if(panoramaViewerInstance){
+   try{panoramaViewerInstance.destroy();}catch(e){}
+   panoramaViewerInstance=null;
+ }
+ document.body.style.overflow="";
+}
+
+async function loadProjectMedia(projectId){
+ currentProjectMedia=await getProjectMedia(projectId);
+ renderProjectMediaList();
+}
+
+function renderProjectMediaList(){
+ const list=document.getElementById("mediaList");
+ if(!list) return;
+ if(!currentProjectMedia.length){
+   list.innerHTML='<div class="db-message">Este proyecto todavía no tiene archivos adjuntos.</div>';
+   return;
+ }
+
+ list.innerHTML=currentProjectMedia.map(m=>{
+   const url=mediaPublicUrl(m.storage_path);
+   const thumb=m.media_type==="image"
+     ? `<img class="media-thumb" src="${esc(url)}" alt="">`
+     : `<div class="media-thumb">${mediaIcon(m.media_type)}</div>`;
+   return `<div class="media-item">
+     ${thumb}
+     <div class="media-meta">
+       <strong>${esc(m.title||m.file_name||"Archivo")}</strong>
+       <span>${mediaIcon(m.media_type)} · ${esc(m.file_name||"")}</span>
+     </div>
+     <div class="media-tools">
+       <button class="media-tool" type="button" data-open-media="${m.id}">Abrir</button>
+       <button class="media-tool delete" type="button" data-delete-media="${m.id}">Eliminar</button>
+     </div>
+   </div>`;
+ }).join("");
+
+ list.querySelectorAll("[data-open-media]").forEach(btn=>{
+   btn.addEventListener("click",()=>{
+     const r=currentProjectMedia.find(m=>String(m.id)===String(btn.dataset.openMedia));
+     if(r) openMediaViewer(r);
+   });
+ });
+ list.querySelectorAll("[data-delete-media]").forEach(btn=>{
+   btn.addEventListener("click",()=>deleteMedia(btn.dataset.deleteMedia));
+ });
+}
+
+function safeFileName(name){
+ return String(name||"archivo")
+   .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+   .replace(/[^a-zA-Z0-9._-]+/g,"-")
+   .replace(/-+/g,"-");
+}
+
+async function uploadProjectMedia(){
+ const projectId=document.getElementById("dbId").value;
+ const input=document.getElementById("mediaFiles");
+ const status=document.getElementById("mediaUploadStatus");
+ const mediaType=document.getElementById("mediaType").value;
+ const titleBase=document.getElementById("mediaTitle").value.trim();
+ const files=[...(input.files||[])];
+
+ if(!projectId || !files.length){
+   status.textContent="Selecciona al menos un archivo.";
+   return;
+ }
+
+ status.textContent="Subiendo…";
+ try{
+   for(let i=0;i<files.length;i++){
+     const file=files[i];
+     const path=`${projectId}/${Date.now()}-${i}-${safeFileName(file.name)}`;
+
+     const {error:uploadError}=await dbClient.storage
+       .from("project-media")
+       .upload(path,file,{cacheControl:"3600",upsert:false,contentType:file.type||undefined});
+     if(uploadError) throw uploadError;
+
+     const {error:dbError}=await dbClient.from("project_media").insert({
+       project_id:Number(projectId),
+       media_type:mediaType,
+       title:titleBase || file.name,
+       storage_path:path,
+       file_name:file.name,
+       mime_type:file.type||null,
+       size_bytes:file.size||null,
+       created_by:currentSession?.user?.id||null
+     });
+     if(dbError){
+       await dbClient.storage.from("project-media").remove([path]);
+       throw dbError;
+     }
+   }
+
+   input.value="";
+   document.getElementById("mediaTitle").value="";
+   status.textContent="Archivo(s) cargado(s) correctamente.";
+   await loadProjectMedia(projectId);
+ }catch(err){
+   console.error(err);
+   status.textContent=`No se pudo cargar: ${err.message||err}`;
+ }
+}
+
+async function deleteMedia(mediaId){
+ const record=currentProjectMedia.find(m=>String(m.id)===String(mediaId));
+ if(!record) return;
+ if(!confirm(`¿Eliminar el archivo "${record.title||record.file_name}"?`)) return;
+
+ const {error:storageError}=await dbClient.storage
+   .from("project-media")
+   .remove([record.storage_path]);
+ if(storageError){
+   alert(`No se pudo eliminar el archivo: ${storageError.message}`);
+   return;
+ }
+
+ const {error}=await dbClient.from("project_media").delete().eq("id",mediaId);
+ if(error){
+   alert(`No se pudo eliminar el registro: ${error.message}`);
+   return;
+ }
+ await loadProjectMedia(record.project_id);
+}
+
+function matrixFilteredRows(){
+ const q=(document.getElementById("matrixSearch")?.value||"").trim().toLowerCase();
+ const cat=document.getElementById("matrixCategoryFilter")?.value||"";
+ const parish=document.getElementById("matrixParishFilter")?.value||"";
+ const status=document.getElementById("matrixStatusFilter")?.value||"";
+
+ return matrixRows.filter(r=>{
+   const hay=[r.proyecto,r.parroquia,r.estado_original,r.responsables,r.tramite]
+     .join(" ").toLowerCase();
+   return (!q||hay.includes(q))
+     && (!cat||r.categoria===cat)
+     && (!parish||r.parroquia===parish)
+     && (!status||r.estado_dashboard===status);
+ });
+}
+
+function fillMatrixParishes(){
+ const sel=document.getElementById("matrixParishFilter");
+ if(!sel) return;
+ const current=sel.value;
+ const vals=[...new Set(matrixRows.map(r=>r.parroquia).filter(Boolean))]
+   .sort((a,b)=>a.localeCompare(b,"es"));
+ sel.innerHTML='<option value="">Todas</option>'+vals.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("");
+ if(vals.includes(current)) sel.value=current;
+}
+
+function renderMatrixPagination(totalPages){
+ const wrap=document.getElementById("matrixPagination");
+ if(!wrap) return;
+ const btns=[];
+ btns.push(`<button class="matrix-page-button" data-mpage="${Math.max(1,matrixCurrentPage-1)}">«</button>`);
+ for(let i=1;i<=totalPages;i++){
+   btns.push(`<button class="matrix-page-button ${i===matrixCurrentPage?"active":""}" data-mpage="${i}">${i}</button>`);
+ }
+ btns.push(`<button class="matrix-page-button" data-mpage="${Math.min(totalPages,matrixCurrentPage+1)}">»</button>`);
+ wrap.innerHTML=btns.join("");
+ wrap.querySelectorAll("[data-mpage]").forEach(b=>{
+   b.addEventListener("click",()=>{
+     matrixCurrentPage=Number(b.dataset.mpage);
+     renderMatrix();
+   });
+ });
+}
+
+async function focusProjectOnMap(projectId){
+ const row=matrixRows.find(r=>String(r.id)===String(projectId));
+ if(!row) return;
+ const p=dbRowToProject(row);
+ const loc=projectLocations(p)[0];
+ if(!loc){
+   alert("Este proyecto no tiene coordenadas registradas.");
+   return;
+ }
+
+ selectView("dashboardView");
+ const mapEl=document.getElementById("projectsMap");
+ mapEl?.scrollIntoView({behavior:"smooth",block:"center"});
+
+ const waitForMap=()=>{
+   if(projectMapInstance && projectMapReady){
+     projectMapInstance.flyTo({center:[loc.lng,loc.lat],zoom:15,duration:1400});
+     setTimeout(()=>showFocusedProjectPopup(row,loc),1500);
+   }else{
+     setTimeout(waitForMap,150);
+   }
+ };
+ waitForMap();
+}
+
+async function showFocusedProjectPopup(row,loc){
+ const p=dbRowToProject(row);
+ const media=await getProjectMedia(row.id);
+ const htmlPopup=`<div style="min-width:250px">
+   <strong>${esc(p.proyecto)}</strong><br>
+   <span><b>Parroquia:</b> ${esc(p.parroquia||"—")}</span><br>
+   <span><b>Estado:</b> ${esc(groupedStatus(p))}</span><br>
+   <span><b>Monto:</b> ${esc(amount(p)>0?moneyValue(amount(p)):"—")}</span>
+   ${buildMapMediaHtml(media)}
+ </div>`;
+ const popup=new maplibregl.Popup({closeButton:true,offset:12})
+   .setLngLat([loc.lng,loc.lat])
+   .setHTML(htmlPopup)
+   .addTo(projectMapInstance);
+ setTimeout(()=>wirePopupMedia(popup,media),0);
+}
+
 
 function renderMatrix(){
  const tbody=document.getElementById("matrixBody");
  const count=document.getElementById("matrixRecordCount");
+ const range=document.getElementById("matrixRangeLabel");
  if(!tbody) return;
 
- const q=(document.getElementById("matrixSearch")?.value||"").trim().toLowerCase();
- const rows=matrixRows.filter(r=>{
-   if(!q) return true;
-   return Object.values(r).join(" ").toLowerCase().includes(q);
- });
+ fillMatrixParishes();
+ const filteredRows=matrixFilteredRows();
+ const totalPages=Math.max(1,Math.ceil(filteredRows.length/matrixPageSize));
+ if(matrixCurrentPage>totalPages) matrixCurrentPage=totalPages;
 
- if(count) count.textContent=`${rows.length} proyecto${rows.length===1?"":"s"}`;
+ const start=(matrixCurrentPage-1)*matrixPageSize;
+ const end=Math.min(start+matrixPageSize,filteredRows.length);
+ const rows=filteredRows.slice(start,end);
 
- tbody.innerHTML=rows.map(r=>`
-   <tr>
-     <td>${esc(r.item??"")}</td>
-     <td>${esc(r.categoria||"")}</td>
-     <td>${esc(r.parroquia||"")}</td>
-     <td class="long-cell">${esc(r.proyecto||"")}</td>
-     <td>${r.monto==null?"":esc(new Intl.NumberFormat("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(r.monto)||0))}</td>
-     <td class="long-cell">${esc(r.tramite||"")}</td>
-     <td class="long-cell">${esc(r.responsables||"")}</td>
-     <td class="long-cell">${esc(r.estado_original||"")}</td>
-     <td>${esc(r.estado_dashboard||"")}</td>
-     <td>${esc(r.fecha_entrega||"")}</td>
-     <td class="long-cell">${esc(r.cronograma_contractual||"")}</td>
-     <td>${r.avance??""}</td>
-     <td class="long-cell">${esc(r.coordenadas_x||"")}</td>
-     <td class="long-cell">${esc(r.coordenadas_y||"")}</td>
-     <td class="actions-cell">
-       <button class="row-action edit" type="button" data-edit-id="${r.id}">Editar</button>
-       <button class="row-action delete" type="button" data-delete-id="${r.id}">Eliminar</button>
+ if(count) count.textContent=`${filteredRows.length} proyecto${filteredRows.length===1?"":"s"}`;
+ if(range) range.textContent=filteredRows.length
+   ? `Mostrando ${start+1} a ${end} de ${filteredRows.length} proyectos`
+   : "No hay proyectos para mostrar";
+
+ tbody.innerHTML=rows.length?rows.map(r=>{
+   const hasMap=projectLocations(dbRowToProject(r)).length>0;
+   return `<tr>
+     <td>${String(r.item??"").padStart(2,"0")}</td>
+     <td class="matrix-project">${esc(r.proyecto||"")}</td>
+     <td>${esc(r.parroquia||"—")}</td>
+     <td><span class="matrix-category">${esc(r.categoria||"—")}</span></td>
+     <td>${r.monto==null?"—":esc(new Intl.NumberFormat("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(r.monto)||0))}</td>
+     <td class="matrix-description">${esc(r.estado_original||"Sin descripción registrada")}</td>
+     <td><span class="matrix-status-pill" data-status="${esc(r.estado_dashboard||"")}">${esc(r.estado_dashboard||"—")}</span></td>
+     <td>${esc(r.fecha_entrega||"—")}</td>
+     <td>${r.avance==null?"—":`${esc(r.avance)}%`}</td>
+     <td class="matrix-actions-cell">
+       <button class="row-action map" type="button" data-map-id="${r.id}" ${hasMap?"":"disabled"}>⌖ Ver en mapa</button>
+       <button class="row-action edit" type="button" data-edit-id="${r.id}">✎ Editar</button>
+       <button class="row-action delete" type="button" data-delete-id="${r.id}">🗑 Eliminar</button>
      </td>
-   </tr>`).join("");
+   </tr>`;
+ }).join(""):`<tr><td colspan="10" style="padding:30px;text-align:center;color:#667085">No existen proyectos con los filtros seleccionados.</td></tr>`;
 
+ tbody.querySelectorAll("[data-map-id]").forEach(btn=>{
+   btn.addEventListener("click",()=>focusProjectOnMap(btn.dataset.mapId));
+ });
  tbody.querySelectorAll("[data-edit-id]").forEach(btn=>{
    btn.addEventListener("click",()=>{
      const row=matrixRows.find(r=>String(r.id)===String(btn.dataset.editId));
      if(row) openCrud(row);
    });
  });
-
  tbody.querySelectorAll("[data-delete-id]").forEach(btn=>{
    btn.addEventListener("click",()=>{
      const row=matrixRows.find(r=>String(r.id)===String(btn.dataset.deleteId));
      if(row) deleteProject(row.id,row.proyecto);
    });
  });
+
+ renderMatrixPagination(totalPages);
 }
 
 async function matrixLogin(){
@@ -1474,7 +2136,28 @@ function bindAdminUI(){
    await refreshProjectsFromDatabase();
    renderMatrix();
  });
- document.getElementById("matrixSearch")?.addEventListener("input",renderMatrix);
+ document.getElementById("matrixSearch")?.addEventListener("input",()=>{matrixCurrentPage=1;renderMatrix();});
+ document.getElementById("matrixCategoryFilter")?.addEventListener("change",()=>{matrixCurrentPage=1;renderMatrix();});
+ document.getElementById("matrixParishFilter")?.addEventListener("change",()=>{matrixCurrentPage=1;renderMatrix();});
+ document.getElementById("matrixStatusFilter")?.addEventListener("change",()=>{matrixCurrentPage=1;renderMatrix();});
+ document.getElementById("matrixClearBtn")?.addEventListener("click",()=>{
+   document.getElementById("matrixSearch").value="";
+   document.getElementById("matrixCategoryFilter").value="";
+   document.getElementById("matrixParishFilter").value="";
+   document.getElementById("matrixStatusFilter").value="";
+   matrixCurrentPage=1;
+   renderMatrix();
+ });
+ document.getElementById("matrixPageSize")?.addEventListener("change",e=>{
+   matrixPageSize=Number(e.target.value)||10;
+   matrixCurrentPage=1;
+   renderMatrix();
+ });
+ document.getElementById("mediaUploadBtn")?.addEventListener("click",uploadProjectMedia);
+ document.getElementById("mediaViewerClose")?.addEventListener("click",closeMediaViewer);
+ document.getElementById("mediaViewer")?.addEventListener("click",e=>{
+   if(e.target.dataset.mediaClose) closeMediaViewer();
+ });
 
  document.getElementById("crudClose")?.addEventListener("click",closeCrud);
  document.getElementById("crudCancel")?.addEventListener("click",closeCrud);
@@ -1592,6 +2275,32 @@ init().catch(err=>{console.error(err);els.body.innerHTML=`<tr><td colspan="9" st
         <label class="field-label span2">Coordenadas Y
           <textarea id="fCoordY" class="field-control" placeholder="Admite una o varias ubicaciones"></textarea>
         </label>
+        <section class="media-manager" id="mediaManager">
+          <h4>Archivos del proyecto</h4>
+          <p class="media-help">Puedes adjuntar imágenes, PDF, videos MP4 y panoramas 360°. Para un proyecto nuevo, guárdalo primero y luego vuelve a editarlo para cargar archivos.</p>
+          <div id="mediaUnsavedNote" class="db-message">Guarda el proyecto para habilitar la carga de archivos.</div>
+          <div id="mediaUploadControls" hidden>
+            <div class="media-upload-grid">
+              <label class="field-label">Tipo
+                <select id="mediaType" class="field-control">
+                  <option value="image">Imagen</option>
+                  <option value="pdf">PDF</option>
+                  <option value="video">Video / recorrido MP4</option>
+                  <option value="tour360">Panorama 360°</option>
+                </select>
+              </label>
+              <label class="field-label">Título
+                <input id="mediaTitle" class="field-control" type="text" placeholder="Ej. Render exterior">
+              </label>
+              <label class="field-label">Archivo
+                <input id="mediaFiles" class="field-control" type="file" multiple accept="image/*,application/pdf,video/mp4">
+              </label>
+              <button id="mediaUploadBtn" class="matrix-btn primary" type="button">Subir archivo</button>
+            </div>
+            <div id="mediaUploadStatus" class="matrix-status"></div>
+            <div id="mediaList" class="media-list"></div>
+          </div>
+        </section>
       </div>
 
       <div id="crudStatus" class="matrix-status"></div>
@@ -1600,6 +2309,18 @@ init().catch(err=>{console.error(err);els.body.innerHTML=`<tr><td colspan="9" st
         <button id="crudSave" class="matrix-btn primary" type="submit">Guardar cambios</button>
       </div>
     </form>
+  </div>
+</div>
+
+
+<div id="mediaViewer" class="media-viewer" aria-hidden="true">
+  <div class="media-viewer-backdrop" data-media-close="true"></div>
+  <div class="media-viewer-card">
+    <div class="media-viewer-head">
+      <strong id="mediaViewerTitle">Archivo</strong>
+      <button id="mediaViewerClose" class="media-viewer-close" type="button">×</button>
+    </div>
+    <div id="mediaViewerBody" class="media-viewer-body"></div>
   </div>
 </div>
 
