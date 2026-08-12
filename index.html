@@ -643,6 +643,109 @@
     }
     .matrix-login.auth-popup[hidden]{display:none!important}
 
+  
+    /* V17 - MAPA Y MULTIMEDIA */
+    .matrix-login.auth-popup{
+      background:#ffffff !important;
+      color:#1f2f46 !important;
+    }
+    .matrix-login.auth-popup h3,
+    .matrix-login.auth-popup p,
+    .matrix-login.auth-popup .field-label,
+    .matrix-login.auth-popup .matrix-status{color:#1f2f46 !important}
+    .matrix-login.auth-popup input{
+      background:#ffffff !important;
+      color:#1f2f46 !important;
+    }
+
+    .map-shell{
+      position:relative;
+      width:100%;
+      height:590px;
+      min-height:590px;
+      overflow:hidden;
+      border-radius:10px;
+      border:1px solid #dbe3ee;
+      background:#eef3f8;
+    }
+    .map-shell #projectsMap{
+      width:100% !important;
+      height:100% !important;
+      min-height:0 !important;
+      border:0 !important;
+      border-radius:0 !important;
+    }
+    .parish-map-label{
+      pointer-events:none;
+      color:#0d2a5b;
+      background:rgba(255,255,255,.88);
+      border:1px solid rgba(13,42,91,.18);
+      border-radius:5px;
+      padding:3px 6px;
+      font-size:10px;
+      font-weight:900;
+      line-height:1;
+      white-space:nowrap;
+      box-shadow:0 1px 4px rgba(13,42,91,.12);
+    }
+
+    .map-media-panel{
+      position:absolute;
+      z-index:12;
+      top:12px;right:12px;bottom:12px;
+      width:340px;
+      max-width:calc(100% - 24px);
+      display:flex;
+      flex-direction:column;
+      background:#fff;
+      border:1px solid #d7dfeb;
+      border-radius:10px;
+      box-shadow:0 12px 36px rgba(13,42,91,.22);
+      transform:translateX(calc(100% + 30px));
+      opacity:0;
+      pointer-events:none;
+      transition:transform .22s ease,opacity .22s ease;
+    }
+    .map-media-panel.open{transform:translateX(0);opacity:1;pointer-events:auto}
+    .map-media-panel-head{
+      display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+      padding:13px 14px;border-bottom:1px solid #e3e8ef;flex:0 0 auto;
+    }
+    .map-media-panel-head strong{display:block;color:#0d2a5b;font-size:12px;line-height:1.3}
+    .map-media-panel-head span{display:block;color:#6c778b;font-size:9px;margin-top:3px}
+    .map-media-panel-close{border:0;background:transparent;color:#667085;font-size:23px;line-height:1;cursor:pointer;padding:0}
+    .map-media-panel-body{overflow-y:auto;padding:10px;display:grid;gap:9px;min-height:0}
+    .map-media-panel-empty{
+      padding:24px 12px;text-align:center;color:#6b7689;font-size:10px;
+      border:1px dashed #ccd5e3;border-radius:8px;background:#f8fafc;
+    }
+    .map-media-card{
+      display:grid;grid-template-columns:92px 1fr;gap:10px;
+      border:1px solid #e0e6ef;border-radius:8px;background:#fff;padding:8px;
+      cursor:pointer;transition:.15s ease;
+    }
+    .map-media-card:hover{border-color:#9fb6d8;box-shadow:0 5px 15px rgba(13,42,91,.12);transform:translateY(-1px)}
+    .map-media-card-preview{
+      width:92px;height:68px;border-radius:6px;overflow:hidden;background:#e9eef5;
+      display:grid;place-items:center;color:#35547f;font-size:12px;font-weight:900;
+    }
+    .map-media-card-preview img{width:100%;height:100%;object-fit:cover;display:block}
+    .map-media-card-info{min-width:0;align-self:center}
+    .map-media-card-info strong{display:block;color:#203858;font-size:10px;line-height:1.25;overflow-wrap:anywhere}
+    .map-media-card-info span{display:block;color:#778195;font-size:9px;margin-top:4px}
+    .map-media-panel-note{
+      padding:8px 10px;border-top:1px solid #e3e8ef;color:#667085;
+      font-size:9px;flex:0 0 auto;background:#fafbfd;
+    }
+    @media(max-width:760px){
+      .map-shell{height:500px;min-height:500px}
+      .map-media-panel{
+        left:10px;right:10px;top:auto;bottom:10px;width:auto;max-height:58%;
+        transform:translateY(calc(100% + 25px));
+      }
+      .map-media-panel.open{transform:translateY(0)}
+    }
+
   </style>
 </head>
 <body>
@@ -729,7 +832,20 @@
         </div>
         <div id="mapProjectCount" class="map-count">Cargando mapa…</div>
       </div>
-      <div id="projectsMap" aria-label="Mapa interactivo de proyectos" style="width:100%;height:590px;min-height:590px;"></div>
+      <div class="map-shell">
+        <div id="projectsMap" aria-label="Mapa interactivo de proyectos"></div>
+        <aside id="mapMediaPanel" class="map-media-panel" aria-hidden="true">
+          <div class="map-media-panel-head">
+            <div>
+              <strong id="mapMediaProjectTitle">Archivos del proyecto</strong>
+              <span id="mapMediaProjectMeta">Selecciona un proyecto en el mapa</span>
+            </div>
+            <button id="mapMediaPanelClose" class="map-media-panel-close" type="button" aria-label="Cerrar panel">×</button>
+          </div>
+          <div id="mapMediaPanelBody" class="map-media-panel-body"></div>
+          <div class="map-media-panel-note">Haz clic en una imagen, PDF, video o panorama 360° para abrirlo.</div>
+        </aside>
+      </div>
     </section>
 </main>
 
@@ -1217,47 +1333,34 @@ async function renderProjectMap(){
          "line-opacity":0.95
        }
      });
-     map.addLayer({
-       id:"parroquias-label",
-       type:"symbol",
-       source:"parroquias",
-       layout:{
-         "text-field":[
-           "coalesce",
-           ["get","nombre_mapa"],
-           ["get","nombre"],
-           ["get","nombre_1"],
-           "PARROQUIA"
-         ],
-         "text-size":12,
-         "text-font":["Open Sans Regular"],
-         "text-anchor":"center",
-         "text-allow-overlap":true,
-         "text-ignore-placement":false,
-         "symbol-placement":"point"
-       },
-       paint:{
-         "text-color":"#102758",
-         "text-halo-color":"#ffffff",
-         "text-halo-width":2.2,
-         "text-halo-blur":0.4
-       }
-     });
 
 
-     map.on("click","parroquias-fill",e=>{
-       const f=e.features?.[0];
-       if(!f) return;
-       const props=f.properties||{};
-       const parishName=props.nombre_mapa||props.nombre||props.nombre_1||"Parroquia";
-       new maplibregl.Popup({closeButton:true,offset:8})
-         .setLngLat(e.lngLat)
-         .setHTML(`<strong>${esc(parishName)}</strong>`)
+
+
+
+
+     // Etiquetas permanentes de parroquias.
+     parishGeo.features.forEach(feature=>{
+       const props=feature.properties||{};
+       const parishName=props.nombre_mapa||props.nombre||props.nombre_1||"";
+       if(!parishName) return;
+       const parishBounds=new maplibregl.LngLatBounds();
+       const walkCoords=coords=>{
+         if(Array.isArray(coords) && typeof coords[0]==="number"){
+           parishBounds.extend(coords);
+         }else if(Array.isArray(coords)){
+           coords.forEach(walkCoords);
+         }
+       };
+       walkCoords(feature.geometry?.coordinates);
+       if(parishBounds.isEmpty()) return;
+       const el=document.createElement("div");
+       el.className="parish-map-label";
+       el.textContent=parishName;
+       new maplibregl.Marker({element:el,anchor:"center"})
+         .setLngLat(parishBounds.getCenter())
          .addTo(map);
      });
-
-     map.on("mouseenter","parroquias-fill",()=>map.getCanvas().style.cursor="pointer");
-     map.on("mouseleave","parroquias-fill",()=>map.getCanvas().style.cursor="");
 
      map.addSource("proyectos",{type:"geojson",data:projectGeo});
      map.addLayer({
@@ -1266,7 +1369,15 @@ async function renderProjectMap(){
        source:"proyectos",
        paint:{
          "circle-radius":7,
-         "circle-color":"#e83f44",
+         "circle-color":[
+           "match",
+           ["get","estado"],
+           "Entregado para Contratación","#0b9a4a",
+           "Remitido a otra dirección","#f28c28",
+           "En desarrollo","#f2c94c",
+           "No iniciado","#d93636",
+           "#64748b"
+         ],
          "circle-stroke-color":"#ffffff",
          "circle-stroke-width":2,
          "circle-opacity":1
@@ -1333,15 +1444,14 @@ async function renderProjectMap(){
          <span><b>Monto:</b> ${esc(p.monto||"—")}</span><br>
          <span><b>Avance:</b> ${esc(p.avance||"—")}</span><br>
          <span><b>Área de intervención:</b> ${esc(p.area_intervencion||"—")}</span>
-         ${buildMapMediaHtml(media)}
        </div>`;
 
-     const popup=new maplibregl.Popup({closeButton:true,offset:12})
+     new maplibregl.Popup({closeButton:true,offset:12})
        .setLngLat(f.geometry.coordinates)
        .setHTML(htmlPopup)
        .addTo(map);
 
-     setTimeout(()=>wirePopupMedia(popup,media),0);
+     renderMapMediaPanel(p,media);
    });
 
    map.on("mouseenter","proyectos-circle",()=>map.getCanvas().style.cursor="pointer");
@@ -1754,6 +1864,67 @@ function mediaIcon(type){
  return type==="image"?"IMG":type==="pdf"?"PDF":type==="video"?"MP4":"360°";
 }
 
+
+function mediaTypeLabel(type){
+ return type==="image"?"Imagen":
+        type==="pdf"?"PDF":
+        type==="video"?"Video MP4":
+        type==="tour360"?"Panorama 360°":"Archivo";
+}
+
+function closeMapMediaPanel(){
+ const panel=document.getElementById("mapMediaPanel");
+ if(!panel) return;
+ panel.classList.remove("open");
+ panel.setAttribute("aria-hidden","true");
+}
+
+function renderMapMediaPanel(projectProps,media){
+ const panel=document.getElementById("mapMediaPanel");
+ const title=document.getElementById("mapMediaProjectTitle");
+ const meta=document.getElementById("mapMediaProjectMeta");
+ const body=document.getElementById("mapMediaPanelBody");
+ if(!panel||!body) return;
+
+ title.textContent=projectProps?.proyecto||"Archivos del proyecto";
+ meta.textContent=[projectProps?.parroquia||"",projectProps?.estado||""].filter(Boolean).join(" · ");
+
+ if(!media?.length){
+   body.innerHTML='<div class="map-media-panel-empty">Este proyecto todavía no tiene imágenes ni archivos cargados.</div>';
+ }else{
+   body.innerHTML=media.map(m=>{
+     const url=mediaPublicUrl(m.storage_path);
+     const preview=m.media_type==="image"
+       ? `<img src="${esc(url)}" alt="${esc(m.title||m.file_name||"Imagen")}">`
+       : `<span>${esc(mediaIcon(m.media_type))}</span>`;
+     return `<article class="map-media-card" data-map-panel-media="${m.id}" tabindex="0" role="button">
+       <div class="map-media-card-preview">${preview}</div>
+       <div class="map-media-card-info">
+         <strong>${esc(m.title||m.file_name||"Archivo")}</strong>
+         <span>${esc(mediaTypeLabel(m.media_type))}${m.file_name?` · ${esc(m.file_name)}`:""}</span>
+       </div>
+     </article>`;
+   }).join("");
+
+   body.querySelectorAll("[data-map-panel-media]").forEach(card=>{
+     const open=()=>{
+       const record=media.find(m=>String(m.id)===String(card.dataset.mapPanelMedia));
+       if(record) openMediaViewer(record);
+     };
+     card.addEventListener("click",open);
+     card.addEventListener("keydown",e=>{
+       if(e.key==="Enter"||e.key===" "){
+         e.preventDefault();
+         open();
+       }
+     });
+   });
+ }
+
+ panel.classList.add("open");
+ panel.setAttribute("aria-hidden","false");
+}
+
 function buildMapMediaHtml(media){
  if(!media?.length) return "";
  const firstImage=media.find(m=>m.media_type==="image");
@@ -2027,13 +2198,17 @@ async function showFocusedProjectPopup(row,loc){
    <span><b>Estado:</b> ${esc(groupedStatus(p))}</span><br>
    <span><b>Monto:</b> ${esc(amount(p)>0?moneyValue(amount(p)):"—")}</span><br>
    <span><b>Área de intervención:</b> ${esc(p["Área de Intervención"]||"—")}</span>
-   ${buildMapMediaHtml(media)}
  </div>`;
- const popup=new maplibregl.Popup({closeButton:true,offset:12})
+ new maplibregl.Popup({closeButton:true,offset:12})
    .setLngLat([loc.lng,loc.lat])
    .setHTML(htmlPopup)
    .addTo(projectMapInstance);
- setTimeout(()=>wirePopupMedia(popup,media),0);
+
+ renderMapMediaPanel({
+   proyecto:p.proyecto,
+   parroquia:p.parroquia,
+   estado:groupedStatus(p)
+ },media);
 }
 
 
@@ -2213,6 +2388,7 @@ function bindAdminUI(){
    renderMatrix();
  });
  document.getElementById("mediaUploadBtn")?.addEventListener("click",uploadProjectMedia);
+ document.getElementById("mapMediaPanelClose")?.addEventListener("click",closeMapMediaPanel);
  document.getElementById("mediaViewerClose")?.addEventListener("click",closeMediaViewer);
  document.getElementById("mediaViewer")?.addEventListener("click",e=>{
    if(e.target.dataset.mediaClose) closeMediaViewer();
