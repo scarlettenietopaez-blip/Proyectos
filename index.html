@@ -1451,7 +1451,7 @@ async function initDatabase(){
    if(notice){
      notice.hidden=false;
      notice.className="db-message";
-     notice.textContent="El Dashboard está usando el CSV como respaldo. Configura supabase-config.js para habilitar edición persistente.";
+     notice.textContent="No se pudo inicializar Supabase. El Dashboard no cargará datos hasta restablecer la conexión.";
    }
    return;
  }
@@ -2249,7 +2249,9 @@ async function init(){
 
  await refreshProjectsFromDatabase();
 
- fillSelect(els.parish,unique("parroquia"));
+ if(els.parish){
+   fillSelect(els.parish,unique("parroquia"));
+ }
  renderKpis();
  renderCharts();
  bind();
@@ -2275,7 +2277,7 @@ init().catch(err=>{
    const warning=document.createElement("div");
    warning.id="supabaseLoadError";
    warning.style.cssText="margin:18px 30px;padding:14px 16px;border:1px solid #f1b7b4;background:#fff1f0;color:#9a2020;border-radius:9px;font-size:12px;font-weight:700";
-   warning.textContent="No se pudo cargar la información oficial desde Supabase. La conexión existe, pero la Data API devolvió un error al consultar public.proyectos.";
+   warning.textContent="No se pudo completar la carga del Dashboard. Revisa la consola del navegador para identificar el error.";
    dashboard.querySelector("main")?.prepend(warning);
  }
 });
