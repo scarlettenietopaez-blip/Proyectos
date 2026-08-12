@@ -7,6 +7,8 @@
   <title>Seguimiento de Proyectos | GADM Riobamba</title>
   <link rel="icon" type="image/png" href="./assets/favicon.png">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./supabase-config.js"></script>
   <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/proj4@2.11.0/dist/proj4.js"></script>
@@ -202,10 +204,201 @@
       #projectsMap{height:470px}
       .map-card-head{flex-direction:column}
     }
+  
+    /* =========================================================
+       V13 - NAVEGACIÓN LATERAL + MATRIZ CRUD
+       ========================================================= */
+    body{overflow-x:hidden}
+    .admin-sidebar{
+      position:fixed;
+      left:0;
+      top:0;
+      bottom:0;
+      width:228px;
+      z-index:1200;
+      background:linear-gradient(180deg,#0b2b5f,#123b78);
+      color:#fff;
+      display:flex;
+      flex-direction:column;
+      box-shadow:4px 0 18px rgba(13,42,91,.12);
+      transition:width .22s ease,transform .22s ease;
+    }
+    .sidebar-head{
+      min-height:76px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:14px 14px 12px 18px;
+      border-bottom:1px solid rgba(255,255,255,.12);
+    }
+    .sidebar-title{
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:.04em;
+      line-height:1.25;
+    }
+    .sidebar-toggle{
+      width:34px;height:34px;border:1px solid rgba(255,255,255,.22);
+      background:rgba(255,255,255,.08);color:#fff;border-radius:8px;
+      cursor:pointer;font-size:18px;
+    }
+    .sidebar-nav{display:grid;gap:7px;padding:16px 10px}
+    .side-tab{
+      border:0;background:transparent;color:#fff;cursor:pointer;
+      display:flex;align-items:center;gap:12px;text-align:left;
+      padding:12px 13px;border-radius:9px;font:inherit;font-size:12px;font-weight:700;
+    }
+    .side-tab:hover,.side-tab.active{background:rgba(255,255,255,.12)}
+    .side-icon{font-size:18px;width:22px;text-align:center;flex:0 0 auto}
+    .sidebar-foot{
+      margin-top:auto;padding:14px 14px 20px;font-size:9px;color:#cbd8eb;
+      border-top:1px solid rgba(255,255,255,.1)
+    }
+    .app-shell{margin-left:228px;transition:margin-left .22s ease}
+    body.sidebar-collapsed .admin-sidebar{width:66px}
+    body.sidebar-collapsed .app-shell{margin-left:66px}
+    body.sidebar-collapsed .sidebar-title,
+    body.sidebar-collapsed .side-text,
+    body.sidebar-collapsed .sidebar-foot{display:none}
+    body.sidebar-collapsed .side-tab{justify-content:center;padding-left:10px;padding-right:10px}
+    body.sidebar-collapsed .sidebar-head{justify-content:center;padding-left:8px;padding-right:8px}
+
+    .view-panel{display:none}
+    .view-panel.active{display:block}
+
+    .matrix-page{padding:25px 30px 20px}
+    .matrix-header{
+      display:flex;align-items:flex-start;justify-content:space-between;gap:18px;
+      margin-bottom:16px;
+    }
+    .matrix-header h2{margin:0 0 5px;font-size:20px;color:#0d2a5b}
+    .matrix-header p{margin:0;color:#667085;font-size:11px}
+    .matrix-actions{display:flex;gap:9px;flex-wrap:wrap}
+    .matrix-btn{
+      height:38px;border-radius:7px;padding:0 16px;border:1px solid #1e63d5;
+      background:#fff;color:#1e63d5;font-weight:700;font-size:11px;cursor:pointer;
+    }
+    .matrix-btn.primary{background:#0d2a5b;color:#fff;border-color:#0d2a5b}
+    .matrix-btn.danger{border-color:#b42318;color:#b42318}
+    .matrix-btn:disabled{opacity:.5;cursor:not-allowed}
+
+    .connection-badge{
+      display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border-radius:20px;
+      background:#fff4e5;color:#8a5600;font-size:10px;font-weight:700;
+    }
+    .connection-badge.online{background:#eaf7ef;color:#08793e}
+    .connection-badge.offline{background:#feeceb;color:#b42318}
+
+    .matrix-login{
+      max-width:520px;margin:42px auto;background:#fff;border:1px solid #dde3ec;
+      border-radius:13px;padding:25px;box-shadow:0 7px 24px rgba(13,42,91,.08)
+    }
+    .matrix-login h3{margin:0 0 7px;color:#0d2a5b}
+    .matrix-login p{margin:0 0 18px;color:#667085;font-size:11px;line-height:1.5}
+    .login-grid{display:grid;gap:12px}
+    .field-label{display:grid;gap:6px;font-size:11px;font-weight:700;color:#344054}
+    .field-control{
+      width:100%;height:38px;border:1px solid #cfd8e6;border-radius:6px;
+      padding:0 11px;background:#fff;color:#344054;font:inherit;
+    }
+    textarea.field-control{height:86px;padding:9px 11px;resize:vertical}
+    .matrix-status{margin-top:10px;font-size:10px;color:#667085;min-height:14px}
+
+    .matrix-card{
+      background:#fff;border:1px solid #dde3ec;border-radius:12px;
+      box-shadow:0 7px 24px rgba(13,42,91,.08);overflow:hidden
+    }
+    .matrix-toolbar{
+      display:grid;grid-template-columns:minmax(260px,1fr) auto auto;gap:10px;
+      align-items:center;padding:13px 14px;border-bottom:1px solid #e4e9f2
+    }
+    .matrix-search{height:36px;border:1px solid #cfd8e6;border-radius:6px;padding:0 11px;font:inherit}
+    .matrix-scroll{overflow:auto;max-height:calc(100vh - 265px)}
+    .matrix-table{min-width:2350px;width:100%;border-collapse:separate;border-spacing:0;font-size:10px}
+    .matrix-table th{
+      position:sticky;top:0;z-index:2;background:#0d2a5b;color:#fff;
+      text-align:left;padding:10px 9px;white-space:nowrap
+    }
+    .matrix-table td{
+      border-bottom:1px solid #e3e8ef;border-right:1px solid #e8edf3;
+      padding:9px;vertical-align:top;color:#344054;max-width:320px;white-space:pre-line
+    }
+    .matrix-table tbody tr:hover{background:#f8faff}
+    .matrix-table .long-cell{min-width:260px;max-width:360px;line-height:1.35}
+    .matrix-table .actions-cell{white-space:nowrap;min-width:125px}
+    .row-action{
+      border:0;background:transparent;color:#1557b0;font-weight:700;font-size:10px;cursor:pointer;padding:4px 6px
+    }
+    .row-action.delete{color:#b42318}
+
+    .crud-modal{display:none;position:fixed;inset:0;z-index:2200}
+    .crud-modal.open{display:block}
+    .crud-backdrop{position:absolute;inset:0;background:rgba(8,24,52,.7)}
+    .crud-dialog{
+      position:relative;width:min(980px,calc(100% - 28px));max-height:calc(100vh - 32px);
+      margin:16px auto;background:#fff;border-radius:12px;overflow:auto;
+      box-shadow:0 25px 80px rgba(0,0,0,.32)
+    }
+    .crud-head{
+      position:sticky;top:0;z-index:4;background:#fff;border-bottom:1px solid #e4e9f2;
+      display:flex;justify-content:space-between;align-items:center;padding:15px 18px
+    }
+    .crud-head h3{margin:0;color:#0d2a5b;font-size:17px}
+    .crud-close{border:0;background:transparent;font-size:26px;color:#667085;cursor:pointer}
+    .crud-form{padding:18px}
+    .crud-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+    .crud-grid .span2{grid-column:span 2}
+    .crud-grid .span3{grid-column:1/-1}
+    .crud-foot{
+      display:flex;justify-content:flex-end;gap:9px;padding-top:18px;margin-top:6px;
+      border-top:1px solid #e4e9f2
+    }
+    .required-star{color:#b42318}
+    .db-message{
+      padding:11px 13px;border-radius:8px;background:#f6f8fb;color:#475467;
+      font-size:10px;margin-bottom:12px
+    }
+    .db-message.error{background:#feeceb;color:#b42318}
+    .db-message.success{background:#eaf7ef;color:#08793e}
+
+    @media(max-width:900px){
+      .admin-sidebar{transform:translateX(-100%);width:228px}
+      body.sidebar-mobile-open .admin-sidebar{transform:translateX(0)}
+      .app-shell,body.sidebar-collapsed .app-shell{margin-left:0}
+      .matrix-page{padding:15px}
+      .crud-grid{grid-template-columns:1fr 1fr}
+      .crud-grid .span3{grid-column:1/-1}
+    }
+    @media(max-width:620px){
+      .crud-grid{grid-template-columns:1fr}
+      .crud-grid .span2,.crud-grid .span3{grid-column:auto}
+      .matrix-toolbar{grid-template-columns:1fr}
+      .matrix-header{flex-direction:column}
+    }
+
   </style>
 </head>
 <body>
+
+  <aside class="admin-sidebar" id="adminSidebar">
+    <div class="sidebar-head">
+      <div class="sidebar-title">GESTIÓN DE<br>PROYECTOS</div>
+      <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Contraer menú">☰</button>
+    </div>
+    <nav class="sidebar-nav" aria-label="Navegación principal">
+      <button class="side-tab active" id="tabDashboard" type="button" data-view="dashboardView">
+        <span class="side-icon">⌂</span><span class="side-text">Dashboard</span>
+      </button>
+      <button class="side-tab" id="tabMatrix" type="button" data-view="matrixView">
+        <span class="side-icon">▦</span><span class="side-text">Matriz de Proyectos</span>
+      </button>
+    </nav>
+    <div class="sidebar-foot">GADM Riobamba · Jefatura de Diseño de la Obra Pública</div>
+  </aside>
+
 <div class="app-shell">
+  <div id="dashboardView" class="view-panel active">
   <header class="top-header">
     <div class="top-brand">
       <img src="./assets/logo-riobamba-negativo.png" alt="Riobamba - Alcaldía de la Gente" class="header-logo">
@@ -305,6 +498,59 @@
   </main>
 
   <footer><span>© 2026 Gobierno Autónomo Descentralizado Municipal del cantón Riobamba</span><span>Fuente: Jefatura de Diseño de la Obra Pública</span></footer>
+  </div>
+
+  <section id="matrixView" class="view-panel matrix-page">
+    <div class="matrix-header">
+      <div>
+        <h2>Matriz de Proyectos</h2>
+        <p>Registro oficial para alta, edición y eliminación de proyectos. Los cambios guardados alimentan el Dashboard.</p>
+      </div>
+      <div class="matrix-actions">
+        <span id="dbConnectionBadge" class="connection-badge">Base no configurada</span>
+        <button id="matrixLogoutBtn" class="matrix-btn" type="button" hidden>Cerrar sesión</button>
+        <button id="addProjectBtn" class="matrix-btn primary" type="button" hidden>+ Agregar proyecto</button>
+      </div>
+    </div>
+
+    <div id="matrixConfigNotice" class="db-message" hidden></div>
+
+    <div id="matrixLoginPanel" class="matrix-login">
+      <h3>Acceso de edición</h3>
+      <p>El Dashboard puede consultarse normalmente. Para modificar la matriz debes ingresar con un usuario autorizado de Supabase.</p>
+      <div class="login-grid">
+        <label class="field-label">Correo institucional
+          <input id="matrixEmail" class="field-control" type="email" autocomplete="username" placeholder="usuario@institucion.gob.ec">
+        </label>
+        <label class="field-label">Contraseña
+          <input id="matrixPassword" class="field-control" type="password" autocomplete="current-password" placeholder="••••••••">
+        </label>
+        <button id="matrixLoginBtn" class="matrix-btn primary" type="button">Ingresar</button>
+      </div>
+      <div id="matrixLoginStatus" class="matrix-status"></div>
+    </div>
+
+    <div id="matrixDataPanel" class="matrix-card" hidden>
+      <div class="matrix-toolbar">
+        <input id="matrixSearch" class="matrix-search" type="search" placeholder="Buscar en toda la matriz…">
+        <span id="matrixRecordCount" class="connection-badge online">0 proyectos</span>
+        <button id="matrixRefreshBtn" class="matrix-btn" type="button">↻ Actualizar</button>
+      </div>
+      <div class="matrix-scroll">
+        <table class="matrix-table">
+          <thead>
+            <tr>
+              <th>Item</th><th>Categoría</th><th>Parroquia</th><th>Proyecto</th><th>Monto</th>
+              <th>Trámite</th><th>Responsables</th><th>Descripción</th><th>Estado</th>
+              <th>Fecha entrega</th><th>Cronograma contractual</th><th>Avance</th>
+              <th>Coordenadas X</th><th>Coordenadas Y</th><th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="matrixBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
 </div>
 
 <div id="modal" class="modal" aria-hidden="true">
@@ -871,12 +1117,493 @@ function bind(){
  els.parishModalClose.addEventListener("click",closeParishModal);els.parishModal.addEventListener("click",e=>{if(e.target.dataset.parishClose)closeParishModal();});
  document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeModal();closeParishModal();}});
 }
+
+/* =========================================================
+   V13 - SUPABASE / MATRIZ DE PROYECTOS
+   ========================================================= */
+let dbClient=null;
+let dbReady=false;
+let matrixRows=[];
+let currentSession=null;
+
+function supabaseConfigured(){
+ const cfg=window.SUPABASE_CONFIG||{};
+ return Boolean(
+   cfg.url &&
+   cfg.publishableKey &&
+   !cfg.url.includes("PEGAR_") &&
+   !cfg.publishableKey.includes("PEGAR_")
+ );
+}
+
+async function initDatabase(){
+ const badge=document.getElementById("dbConnectionBadge");
+ const notice=document.getElementById("matrixConfigNotice");
+
+ if(!supabaseConfigured()){
+   dbReady=false;
+   if(badge){
+     badge.className="connection-badge offline";
+     badge.textContent="Base no configurada";
+   }
+   if(notice){
+     notice.hidden=false;
+     notice.className="db-message";
+     notice.textContent="El Dashboard está usando el CSV como respaldo. Configura supabase-config.js para habilitar edición persistente.";
+   }
+   return;
+ }
+
+ try{
+   dbClient=window.supabase.createClient(
+     window.SUPABASE_CONFIG.url,
+     window.SUPABASE_CONFIG.publishableKey
+   );
+   const {error}=await dbClient.from("proyectos").select("id",{head:true,count:"exact"});
+   if(error) throw error;
+
+   dbReady=true;
+   if(badge){
+     badge.className="connection-badge online";
+     badge.textContent="Supabase conectado";
+   }
+   if(notice) notice.hidden=true;
+ }catch(err){
+   console.error("Supabase:",err);
+   dbReady=false;
+   if(badge){
+     badge.className="connection-badge offline";
+     badge.textContent="Error de conexión";
+   }
+   if(notice){
+     notice.hidden=false;
+     notice.className="db-message error";
+     notice.textContent=`No se pudo conectar a Supabase: ${err.message||err}`;
+   }
+ }
+}
+
+function dbRowToProject(r){
+ return {
+   ...r,
+   item:Number(r.item),
+   Avance:r.avance??"",
+   "Coordenadas X":r.coordenadas_x??"",
+   "Coordenadas Y":r.coordenadas_y??""
+ };
+}
+
+async function refreshProjectsFromDatabase(){
+ if(!dbReady) return;
+ const {data,error}=await dbClient
+   .from("proyectos")
+   .select("*")
+   .order("item",{ascending:true});
+ if(error) throw error;
+
+ matrixRows=data||[];
+ projects=matrixRows.map(dbRowToProject);
+
+ // Reconstruir selector de parroquia.
+ if(els.parish){
+   const current=els.parish.value;
+   els.parish.innerHTML='<option value="">Todas</option>';
+   fillSelect(els.parish,unique("parroquia"));
+   if([...els.parish.options].some(o=>o.value===current)) els.parish.value=current;
+ }
+}
+
+function projectToDbPayload(){
+ const avanceRaw=document.getElementById("fAvance").value;
+ const montoRaw=document.getElementById("fMonto").value;
+
+ return {
+   item:Number(document.getElementById("fItem").value),
+   categoria:document.getElementById("fCategoria").value,
+   parroquia:document.getElementById("fParroquia").value.trim(),
+   proyecto:document.getElementById("fProyecto").value.trim(),
+   monto:montoRaw===""?null:Number(montoRaw),
+   tramite:document.getElementById("fTramite").value.trim(),
+   responsables:document.getElementById("fResponsables").value.trim(),
+   estado_original:document.getElementById("fEstadoOriginal").value.trim(),
+   estado_dashboard:document.getElementById("fEstadoDashboard").value,
+   fecha_entrega:document.getElementById("fFechaEntrega").value.trim(),
+   cronograma_contractual:document.getElementById("fCronograma").value.trim(),
+   avance:avanceRaw===""?null:Number(avanceRaw),
+   coordenadas_x:document.getElementById("fCoordX").value.trim(),
+   coordenadas_y:document.getElementById("fCoordY").value.trim()
+ };
+}
+
+function setFormFromRow(r){
+ document.getElementById("dbId").value=r?.id??"";
+ document.getElementById("fItem").value=r?.item??nextProjectItem();
+ document.getElementById("fCategoria").value=r?.categoria||"PAC";
+ document.getElementById("fParroquia").value=r?.parroquia||"";
+ document.getElementById("fProyecto").value=r?.proyecto||"";
+ document.getElementById("fMonto").value=r?.monto??"";
+ document.getElementById("fTramite").value=r?.tramite||"";
+ document.getElementById("fResponsables").value=r?.responsables||"";
+ document.getElementById("fEstadoOriginal").value=r?.estado_original||"";
+ document.getElementById("fEstadoDashboard").value=r?.estado_dashboard||"En desarrollo";
+ document.getElementById("fFechaEntrega").value=r?.fecha_entrega||"";
+ document.getElementById("fCronograma").value=r?.cronograma_contractual||"";
+ document.getElementById("fAvance").value=r?.avance??"";
+ document.getElementById("fCoordX").value=r?.coordenadas_x||"";
+ document.getElementById("fCoordY").value=r?.coordenadas_y||"";
+}
+
+function nextProjectItem(){
+ const max=matrixRows.reduce((m,r)=>Math.max(m,Number(r.item)||0),0);
+ return max+1;
+}
+
+function openCrud(row=null){
+ if(!dbReady || !currentSession) return;
+ setFormFromRow(row);
+ document.getElementById("crudTitle").textContent=row?"Editar proyecto":"Agregar proyecto";
+ document.getElementById("crudStatus").textContent="";
+ const modal=document.getElementById("crudModal");
+ modal.classList.add("open");
+ modal.setAttribute("aria-hidden","false");
+ document.body.style.overflow="hidden";
+}
+
+function closeCrud(){
+ const modal=document.getElementById("crudModal");
+ modal.classList.remove("open");
+ modal.setAttribute("aria-hidden","true");
+ document.body.style.overflow="";
+}
+
+async function saveProject(evt){
+ evt.preventDefault();
+ if(!dbReady || !currentSession) return;
+
+ const status=document.getElementById("crudStatus");
+ const btn=document.getElementById("crudSave");
+ const id=document.getElementById("dbId").value;
+ const payload=projectToDbPayload();
+
+ if(!payload.item || !payload.proyecto){
+   status.textContent="Item y Proyecto son obligatorios.";
+   return;
+ }
+
+ btn.disabled=true;
+ status.textContent="Guardando…";
+
+ try{
+   let result;
+   if(id){
+     result=await dbClient.from("proyectos").update(payload).eq("id",id).select().single();
+   }else{
+     result=await dbClient.from("proyectos").insert(payload).select().single();
+   }
+   if(result.error) throw result.error;
+
+   await afterDatabaseChange();
+   closeCrud();
+ }catch(err){
+   console.error(err);
+   status.textContent=`No se pudo guardar: ${err.message||err}`;
+ }finally{
+   btn.disabled=false;
+ }
+}
+
+async function deleteProject(id,projectName){
+ if(!dbReady || !currentSession) return;
+ const ok=confirm(`¿Eliminar definitivamente el proyecto?\n\n${projectName}\n\nEsta acción no se puede deshacer.`);
+ if(!ok) return;
+
+ const {error}=await dbClient.from("proyectos").delete().eq("id",id);
+ if(error){
+   alert(`No se pudo eliminar: ${error.message}`);
+   return;
+ }
+ await afterDatabaseChange();
+}
+
+async function afterDatabaseChange(){
+ await refreshProjectsFromDatabase();
+ renderKpis();
+ renderCharts();
+ renderTable();
+ renderMatrix();
+ if(document.getElementById("projectsMap")){
+   // El mapa actual no permite cambiar las fuentes sin referencia global;
+   // recargamos la página solo si la vista del mapa está activa.
+   // Los demás datos se actualizan inmediatamente.
+ }
+}
+
+function renderMatrix(){
+ const tbody=document.getElementById("matrixBody");
+ const count=document.getElementById("matrixRecordCount");
+ if(!tbody) return;
+
+ const q=(document.getElementById("matrixSearch")?.value||"").trim().toLowerCase();
+ const rows=matrixRows.filter(r=>{
+   if(!q) return true;
+   return Object.values(r).join(" ").toLowerCase().includes(q);
+ });
+
+ if(count) count.textContent=`${rows.length} proyecto${rows.length===1?"":"s"}`;
+
+ tbody.innerHTML=rows.map(r=>`
+   <tr>
+     <td>${esc(r.item??"")}</td>
+     <td>${esc(r.categoria||"")}</td>
+     <td>${esc(r.parroquia||"")}</td>
+     <td class="long-cell">${esc(r.proyecto||"")}</td>
+     <td>${r.monto==null?"":esc(new Intl.NumberFormat("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(r.monto)||0))}</td>
+     <td class="long-cell">${esc(r.tramite||"")}</td>
+     <td class="long-cell">${esc(r.responsables||"")}</td>
+     <td class="long-cell">${esc(r.estado_original||"")}</td>
+     <td>${esc(r.estado_dashboard||"")}</td>
+     <td>${esc(r.fecha_entrega||"")}</td>
+     <td class="long-cell">${esc(r.cronograma_contractual||"")}</td>
+     <td>${r.avance??""}</td>
+     <td class="long-cell">${esc(r.coordenadas_x||"")}</td>
+     <td class="long-cell">${esc(r.coordenadas_y||"")}</td>
+     <td class="actions-cell">
+       <button class="row-action edit" type="button" data-edit-id="${r.id}">Editar</button>
+       <button class="row-action delete" type="button" data-delete-id="${r.id}">Eliminar</button>
+     </td>
+   </tr>`).join("");
+
+ tbody.querySelectorAll("[data-edit-id]").forEach(btn=>{
+   btn.addEventListener("click",()=>{
+     const row=matrixRows.find(r=>String(r.id)===String(btn.dataset.editId));
+     if(row) openCrud(row);
+   });
+ });
+
+ tbody.querySelectorAll("[data-delete-id]").forEach(btn=>{
+   btn.addEventListener("click",()=>{
+     const row=matrixRows.find(r=>String(r.id)===String(btn.dataset.deleteId));
+     if(row) deleteProject(row.id,row.proyecto);
+   });
+ });
+}
+
+async function matrixLogin(){
+ if(!dbReady) return;
+ const email=document.getElementById("matrixEmail").value.trim();
+ const password=document.getElementById("matrixPassword").value;
+ const status=document.getElementById("matrixLoginStatus");
+ status.textContent="Ingresando…";
+
+ const {data,error}=await dbClient.auth.signInWithPassword({email,password});
+ if(error){
+   status.textContent=error.message;
+   return;
+ }
+ currentSession=data.session;
+ status.textContent="";
+ await syncAuthUI();
+}
+
+async function matrixLogout(){
+ if(dbClient) await dbClient.auth.signOut();
+ currentSession=null;
+ await syncAuthUI();
+}
+
+async function syncAuthUI(){
+ const login=document.getElementById("matrixLoginPanel");
+ const panel=document.getElementById("matrixDataPanel");
+ const add=document.getElementById("addProjectBtn");
+ const logout=document.getElementById("matrixLogoutBtn");
+
+ if(!dbReady){
+   if(login) login.hidden=false;
+   if(panel) panel.hidden=true;
+   if(add) add.hidden=true;
+   if(logout) logout.hidden=true;
+   return;
+ }
+
+ const {data}=await dbClient.auth.getSession();
+ currentSession=data.session||null;
+
+ if(currentSession){
+   login.hidden=true;
+   panel.hidden=false;
+   add.hidden=false;
+   logout.hidden=false;
+   await refreshProjectsFromDatabase();
+   renderMatrix();
+ }else{
+   login.hidden=false;
+   panel.hidden=true;
+   add.hidden=true;
+   logout.hidden=true;
+ }
+}
+
+function selectView(viewId){
+ document.querySelectorAll(".view-panel").forEach(v=>v.classList.toggle("active",v.id===viewId));
+ document.querySelectorAll(".side-tab").forEach(b=>b.classList.toggle("active",b.dataset.view===viewId));
+
+ if(viewId==="matrixView"){
+   syncAuthUI();
+ }
+ window.scrollTo({top:0,behavior:"instant"});
+}
+
+function bindAdminUI(){
+ document.querySelectorAll(".side-tab").forEach(btn=>{
+   btn.addEventListener("click",()=>selectView(btn.dataset.view));
+ });
+
+ document.getElementById("sidebarToggle")?.addEventListener("click",()=>{
+   if(window.innerWidth<=900){
+     document.body.classList.toggle("sidebar-mobile-open");
+   }else{
+     document.body.classList.toggle("sidebar-collapsed");
+   }
+ });
+
+ document.getElementById("matrixLoginBtn")?.addEventListener("click",matrixLogin);
+ document.getElementById("matrixPassword")?.addEventListener("keydown",e=>{
+   if(e.key==="Enter") matrixLogin();
+ });
+ document.getElementById("matrixLogoutBtn")?.addEventListener("click",matrixLogout);
+ document.getElementById("addProjectBtn")?.addEventListener("click",()=>openCrud());
+ document.getElementById("matrixRefreshBtn")?.addEventListener("click",async()=>{
+   await refreshProjectsFromDatabase();
+   renderMatrix();
+ });
+ document.getElementById("matrixSearch")?.addEventListener("input",renderMatrix);
+
+ document.getElementById("crudClose")?.addEventListener("click",closeCrud);
+ document.getElementById("crudCancel")?.addEventListener("click",closeCrud);
+ document.getElementById("crudModal")?.addEventListener("click",e=>{
+   if(e.target.dataset.crudClose) closeCrud();
+ });
+ document.getElementById("projectForm")?.addEventListener("submit",saveProject);
+ document.addEventListener("keydown",e=>{if(e.key==="Escape") closeCrud();});
+
+ if(dbReady && dbClient){
+   dbClient.auth.onAuthStateChange((_event,session)=>{
+     currentSession=session;
+     setTimeout(syncAuthUI,0);
+   });
+ }
+}
+
 async function init(){
- const res=await fetch("./data/proyectos.csv",{cache:"no-store"});if(!res.ok)throw new Error("No se pudo cargar data/proyectos.csv");
- projects=parseCSV(await res.text()).map(p=>({...p,item:Number(p.item)}));
- fillSelect(els.parish,unique("parroquia"));renderKpis();renderCharts();renderTable();bind();await renderProjectMap();
+ await initDatabase();
+
+ if(dbReady){
+   await refreshProjectsFromDatabase();
+ }else{
+   const res=await fetch("./data/proyectos.csv",{cache:"no-store"});
+   if(!res.ok) throw new Error("No se pudo cargar data/proyectos.csv");
+   projects=parseCSV(await res.text()).map(p=>({...p,item:Number(p.item)}));
+ }
+
+ fillSelect(els.parish,unique("parroquia"));
+ renderKpis();
+ renderCharts();
+ renderTable();
+ bind();
+ bindAdminUI();
+
+ if(document.getElementById("projectsMap")){
+   await renderProjectMap();
+ }
+
+ await syncAuthUI();
 }
 init().catch(err=>{console.error(err);els.body.innerHTML=`<tr><td colspan="9" style="padding:30px;text-align:center">No se pudo cargar la información.</td></tr>`;});
 </script>
+
+<div id="crudModal" class="crud-modal" aria-hidden="true">
+  <div class="crud-backdrop" data-crud-close="true"></div>
+  <div class="crud-dialog" role="dialog" aria-modal="true" aria-labelledby="crudTitle">
+    <div class="crud-head">
+      <h3 id="crudTitle">Proyecto</h3>
+      <button id="crudClose" class="crud-close" type="button">×</button>
+    </div>
+    <form id="projectForm" class="crud-form">
+      <input id="dbId" type="hidden">
+      <div class="crud-grid">
+        <label class="field-label">Item <span class="required-star">*</span>
+          <input id="fItem" class="field-control" type="number" min="1" required>
+        </label>
+
+        <label class="field-label">Categoría <span class="required-star">*</span>
+          <select id="fCategoria" class="field-control" required>
+            <option value="PAC">PAC</option>
+            <option value="Fuera del PAC">Fuera del PAC</option>
+          </select>
+        </label>
+
+        <label class="field-label">Parroquia
+          <input id="fParroquia" class="field-control" type="text">
+        </label>
+
+        <label class="field-label span3">Proyecto <span class="required-star">*</span>
+          <textarea id="fProyecto" class="field-control" required></textarea>
+        </label>
+
+        <label class="field-label">Monto (USD)
+          <input id="fMonto" class="field-control" type="number" min="0" step="0.01">
+        </label>
+
+        <label class="field-label span2">Trámite
+          <textarea id="fTramite" class="field-control"></textarea>
+        </label>
+
+        <label class="field-label span3">Responsables
+          <textarea id="fResponsables" class="field-control"></textarea>
+        </label>
+
+        <label class="field-label span3">Descripción / estado original
+          <textarea id="fEstadoOriginal" class="field-control"></textarea>
+        </label>
+
+        <label class="field-label">Estado Dashboard <span class="required-star">*</span>
+          <select id="fEstadoDashboard" class="field-control" required>
+            <option value="En desarrollo">En desarrollo</option>
+            <option value="Entregado para Contratación">Entregado para Contratación</option>
+            <option value="Remitido a otra dirección">Remitido a otra dirección</option>
+            <option value="No iniciado">No iniciado</option>
+          </select>
+        </label>
+
+        <label class="field-label">Fecha de entrega
+          <input id="fFechaEntrega" class="field-control" type="text" placeholder="Ej. 21 DE AGOSTO DEL 2026">
+        </label>
+
+        <label class="field-label">Avance (%)
+          <input id="fAvance" class="field-control" type="number" min="0" max="100" step="0.01">
+        </label>
+
+        <label class="field-label span3">Cronograma contractual
+          <textarea id="fCronograma" class="field-control"></textarea>
+        </label>
+
+        <label class="field-label span2">Coordenadas X
+          <textarea id="fCoordX" class="field-control" placeholder="Admite una o varias ubicaciones"></textarea>
+        </label>
+
+        <label class="field-label span2">Coordenadas Y
+          <textarea id="fCoordY" class="field-control" placeholder="Admite una o varias ubicaciones"></textarea>
+        </label>
+      </div>
+
+      <div id="crudStatus" class="matrix-status"></div>
+      <div class="crud-foot">
+        <button id="crudCancel" class="matrix-btn" type="button">Cancelar</button>
+        <button id="crudSave" class="matrix-btn primary" type="submit">Guardar cambios</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 </body>
 </html>
