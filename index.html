@@ -808,6 +808,7 @@
               <th>Estado</th>
               <th>Fecha prevista</th>
               <th>Avance</th>
+              <th>Área de Intervención</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -1155,7 +1156,8 @@ async function renderProjectMap(){
            monto:amount(p)>0?moneyValue(amount(p)):(p.monto||"—"),
            avance:(p.Avance!==""&&p.Avance!=null)
              ? `${Number(p.Avance)<=1?Math.round(Number(p.Avance)*100):p.Avance}%`
-             : "—"
+             : "—",
+           area_intervencion:p["Área de Intervención"]||"—"
          }
        });
      });
@@ -1329,7 +1331,8 @@ async function renderProjectMap(){
          <span><b>Categoría:</b> ${esc(p.categoria||"—")}</span><br>
          <span><b>Estado:</b> ${esc(p.estado||"—")}</span><br>
          <span><b>Monto:</b> ${esc(p.monto||"—")}</span><br>
-         <span><b>Avance:</b> ${esc(p.avance||"—")}</span>
+         <span><b>Avance:</b> ${esc(p.avance||"—")}</span><br>
+         <span><b>Área de intervención:</b> ${esc(p.area_intervencion||"—")}</span>
          ${buildMapMediaHtml(media)}
        </div>`;
 
@@ -1392,6 +1395,7 @@ function openModal(item){
  ${detail("Fecha prevista / entrega",p.fecha_entrega)}
  ${detail("Cronograma contractual",p.cronograma_contractual)}
  ${detail("Avance",p.Avance!==""&&p.Avance!=null?`${p.Avance}%`:"Sin información registrada")}
+ ${detail("Área de Intervención",p["Área de Intervención"])}
  ${detail("Coordenada X",p["Coordenadas X"])}
  ${detail("Coordenada Y",p["Coordenadas Y"])}
  ${detail("Responsables",p.responsables,true)}
@@ -1487,7 +1491,8 @@ function dbRowToProject(r){
    item:Number(r.item),
    Avance:r.avance??"",
    "Coordenadas X":r.coordenadas_x??"",
-   "Coordenadas Y":r.coordenadas_y??""
+   "Coordenadas Y":r.coordenadas_y??"",
+   "Área de Intervención":r.area_intervencion??""
  };
 }
 
@@ -1529,7 +1534,8 @@ function projectToDbPayload(){
    cronograma_contractual:document.getElementById("fCronograma").value.trim(),
    avance:avanceRaw===""?null:Number(avanceRaw),
    coordenadas_x:document.getElementById("fCoordX").value.trim(),
-   coordenadas_y:document.getElementById("fCoordY").value.trim()
+   coordenadas_y:document.getElementById("fCoordY").value.trim(),
+   area_intervencion:document.getElementById("fAreaIntervencion").value.trim()
  };
 }
 
@@ -1549,6 +1555,7 @@ function setFormFromRow(r){
  document.getElementById("fAvance").value=r?.avance??"";
  document.getElementById("fCoordX").value=r?.coordenadas_x||"";
  document.getElementById("fCoordY").value=r?.coordenadas_y||"";
+ document.getElementById("fAreaIntervencion").value=r?.area_intervencion||"";
 }
 
 function nextProjectItem(){
@@ -1706,7 +1713,8 @@ async function afterDatabaseChange(){
            categoria:displayCategory(p.categoria),
            estado:groupedStatus(p),
            monto:amount(p)>0?moneyValue(amount(p)):(p.monto||"—"),
-           avance:(p.Avance!==""&&p.Avance!=null)?`${p.Avance}%`:"—"
+           avance:(p.Avance!==""&&p.Avance!=null)?`${p.Avance}%`:"—",
+           area_intervencion:p["Área de Intervención"]||"—"
          }
        });
      });
@@ -2054,6 +2062,7 @@ function renderMatrix(){
      <td><span class="matrix-status-pill" data-status="${esc(r.estado_dashboard||"")}">${esc(r.estado_dashboard||"—")}</span></td>
      <td>${esc(r.fecha_entrega||"—")}</td>
      <td>${r.avance==null?"—":`${esc(r.avance)}%`}</td>
+     <td>${esc(r.area_intervencion||"—")}</td>
      <td class="matrix-actions-cell">
        <button class="row-action detail" type="button" data-detail-item="${r.item}">◉ Ver detalle</button>
        <button class="row-action map" type="button" data-map-id="${r.id}" ${hasMap?"":"disabled"}>⌖ Ver en mapa</button>
@@ -2061,7 +2070,7 @@ function renderMatrix(){
        <button class="row-action delete" type="button" data-delete-id="${r.id}">🗑 Eliminar</button>
      </td>
    </tr>`;
- }).join(""):`<tr><td colspan="10" style="padding:30px;text-align:center;color:#667085">No existen proyectos con los filtros seleccionados.</td></tr>`;
+ }).join(""):`<tr><td colspan="11" style="padding:30px;text-align:center;color:#667085">No existen proyectos con los filtros seleccionados.</td></tr>`;
 
  tbody.querySelectorAll("[data-detail-item]").forEach(btn=>{
    btn.addEventListener("click",()=>openModal(btn.dataset.detailItem));
@@ -2322,6 +2331,9 @@ init().catch(err=>{console.error(err);els.body.innerHTML=`<tr><td colspan="9" st
 
         <label class="field-label span2">Coordenadas Y
           <textarea id="fCoordY" class="field-control" placeholder="Admite una o varias ubicaciones"></textarea>
+        </label>
+        <label class="field-label span2">Área de Intervención
+          <textarea id="fAreaIntervencion" class="field-control" placeholder="Ej. 4615 m2, NO, o varias áreas por ubicación"></textarea>
         </label>
         <section class="media-manager" id="mediaManager">
           <h4>Archivos del proyecto</h4>
