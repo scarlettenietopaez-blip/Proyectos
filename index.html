@@ -909,6 +909,10 @@
       font-weight:800;
     }
 
+  
+    /* V18.2: la programación genera una sola etiqueta por parroquia */
+    .parish-map-label{user-select:none}
+
   </style>
 </head>
 <body>
@@ -1506,10 +1510,15 @@ async function renderProjectMap(){
 
 
 
-     // Etiquetas permanentes: UNA sola etiqueta por parroquia.
-     // Algunas parroquias están representadas por más de un feature/polígono
-     // en el GeoJSON. Primero agrupamos por nombre y luego calculamos un
-     // único centro para todo el conjunto.
+     // Etiquetas permanentes: UNA sola por parroquia.
+     // Limpieza preventiva si el mapa se vuelve a inicializar o el navegador
+     // conserva nodos de una ejecución anterior.
+     document.querySelectorAll("#projectsMap .parish-map-label").forEach(el=>{
+       const markerNode=el.closest(".maplibregl-marker");
+       if(markerNode) markerNode.remove();
+       else el.remove();
+     });
+
      const parishLabelGroups=new Map();
 
      parishGeo.features.forEach(feature=>{
@@ -1520,10 +1529,15 @@ async function renderProjectMap(){
 
        if(!parishName) return;
 
-       const key=parishName.toUpperCase();
+       // El código parroquial es la clave principal; el nombre funciona como respaldo.
+       const parishCode=String(props.codigo||props.codigo_par||"").trim();
+       const key=parishCode
+         ? `CODE:${parishCode}`
+         : `NAME:${parishName.toUpperCase().replace(/\s+/g," ")}`;
 
        if(!parishLabelGroups.has(key)){
          parishLabelGroups.set(key,{
+           key,
            name:parishName,
            bounds:new maplibregl.LngLatBounds()
          });
@@ -1538,15 +1552,22 @@ async function renderProjectMap(){
            coords.forEach(walkCoords);
          }
        };
-
        walkCoords(feature.geometry?.coordinates);
      });
+
+     // Segunda deduplicación por el texto final mostrado.
+     const renderedParishNames=new Set();
 
      parishLabelGroups.forEach(group=>{
        if(group.bounds.isEmpty()) return;
 
+       const normalizedName=group.name.toUpperCase().replace(/\s+/g," ").trim();
+       if(renderedParishNames.has(normalizedName)) return;
+       renderedParishNames.add(normalizedName);
+
        const el=document.createElement("div");
        el.className="parish-map-label";
+       el.dataset.parishName=normalizedName;
        el.textContent=group.name;
 
        new maplibregl.Marker({
