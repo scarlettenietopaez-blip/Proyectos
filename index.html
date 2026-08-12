@@ -621,6 +621,28 @@
       .matrix-page-size{justify-self:center}
     }
 
+  
+    /* V15 - MATRIZ PÚBLICA / EDICIÓN PROTEGIDA */
+    .matrix-login.auth-popup{
+      position:fixed;
+      z-index:2800;
+      left:50%;
+      top:50%;
+      transform:translate(-50%,-50%);
+      width:min(520px,calc(100% - 28px));
+      margin:0;
+      box-shadow:0 28px 90px rgba(5,18,41,.34);
+      border:1px solid #cfd8e6;
+    }
+    .matrix-login.auth-popup::before{
+      content:"";
+      position:fixed;
+      inset:-100vh -100vw;
+      z-index:-1;
+      background:rgba(5,18,41,.62);
+    }
+    .matrix-login.auth-popup[hidden]{display:none!important}
+
   </style>
 </head>
 <body>
@@ -709,37 +731,7 @@
       </div>
       <div id="projectsMap" aria-label="Mapa interactivo de proyectos" style="width:100%;height:590px;min-height:590px;"></div>
     </section>
-
-    <section class="projects-box">
-      <div class="filters">
-        <label><span>Categoría</span><select id="categoryFilter"><option value="">Todas</option><option value="PAC">PAC</option><option value="Fuera del PAC">Fuera del PAC</option></select></label>
-        <label><span>Parroquia</span><select id="parishFilter"><option value="">Todas</option></select></label>
-        <label><span>Estado</span><select id="statusFilter">
-          <option value="">Todos</option>
-          <option value="En desarrollo">En desarrollo</option>
-          <option value="Entregado para Contratación">Entregado para Contratación</option>
-          <option value="Remitido a otra dirección">Remitido a otra dirección</option>
-          <option value="No iniciado">No iniciado</option>
-        </select></label>
-        <label class="search-label"><span>&nbsp;</span><div class="search-input-wrap"><span class="search-ico">⌕</span><input id="search" type="search" placeholder="Buscar proyecto o parroquia..."></div></label>
-        <button id="clearFilters" class="clear-btn" type="button">↻&nbsp; Limpiar filtros</button>
-      </div>
-
-      <div class="table-wrap">
-        <table>
-          <thead><tr>
-            <th>N°</th><th>PROYECTO</th><th>PARROQUIA</th><th>CATEGORÍA</th><th>MONTO (USD)</th>
-            <th>DESCRIPCIÓN</th><th>ESTADO</th><th>FECHA PREVISTA</th><th>ACCIONES</th>
-          </tr></thead>
-          <tbody id="projectsBody"></tbody>
-        </table>
-      </div>
-      <div class="pagination-row">
-        <span id="rangeLabel">Mostrando 0 proyectos</span><div id="pagination" class="pagination"></div>
-        <label class="page-size">Mostrar <select id="pageSize"><option value="10">10</option><option value="20">20</option><option value="37">Todos</option></select></label>
-      </div>
-    </section>
-  </main>
+</main>
 
   <footer><span>© 2026 Gobierno Autónomo Descentralizado Municipal del cantón Riobamba</span><span>Fuente: Jefatura de Diseño de la Obra Pública</span></footer>
   </div>
@@ -748,7 +740,7 @@
     <div class="matrix-header">
       <div>
         <h2>Matriz de Proyectos</h2>
-        <p>Registro oficial para alta, edición y eliminación de proyectos. Los cambios guardados alimentan el Dashboard.</p>
+        <p>Consulta pública del registro oficial de proyectos. Agregar, editar y eliminar requiere credenciales autorizadas.</p>
       </div>
       <div class="matrix-actions">
         <span id="dbConnectionBadge" class="connection-badge">Base no configurada</span>
@@ -759,9 +751,9 @@
 
     <div id="matrixConfigNotice" class="db-message" hidden></div>
 
-    <div id="matrixLoginPanel" class="matrix-login">
+    <div id="matrixLoginPanel" class="matrix-login auth-popup" hidden>
       <h3>Acceso de edición</h3>
-      <p>El Dashboard puede consultarse normalmente. Para modificar la matriz debes ingresar con un usuario autorizado de Supabase.</p>
+      <p>La Matriz de Proyectos es de consulta pública. Para agregar, editar o eliminar registros debes ingresar con un usuario autorizado.</p>
       <div class="login-grid">
         <label class="field-label">Correo institucional
           <input id="matrixEmail" class="field-control" type="email" autocomplete="username" placeholder="usuario@institucion.gob.ec">
@@ -769,7 +761,10 @@
         <label class="field-label">Contraseña
           <input id="matrixPassword" class="field-control" type="password" autocomplete="current-password" placeholder="••••••••">
         </label>
-        <button id="matrixLoginBtn" class="matrix-btn primary" type="button">Ingresar</button>
+        <div style="display:flex;gap:8px">
+          <button id="matrixLoginCancelBtn" class="matrix-btn" type="button" style="flex:1">Cancelar</button>
+          <button id="matrixLoginBtn" class="matrix-btn primary" type="button" style="flex:1">Ingresar</button>
+        </div>
       </div>
       <div id="matrixLoginStatus" class="matrix-status"></div>
     </div>
@@ -1406,13 +1401,18 @@ function openModal(item){
 function closeModal(){els.modal.classList.remove("open");els.modal.setAttribute("aria-hidden","true");document.body.style.overflow="";}
 function resetPageAndRender(){currentPage=1;renderTable();}
 function bind(){
- [els.category,els.parish,els.status].forEach(el=>el.addEventListener("change",resetPageAndRender));
- els.search.addEventListener("input",resetPageAndRender);
- els.clear.addEventListener("click",()=>{els.search.value="";els.category.value="";els.parish.value="";els.status.value="";currentPage=1;renderTable();});
- els.pageSize.addEventListener("change",()=>{pageSize=els.pageSize.value==="37"?37:Number(els.pageSize.value);currentPage=1;renderTable();});
- els.modalClose.addEventListener("click",closeModal);els.modal.addEventListener("click",e=>{if(e.target.dataset.close)closeModal();});
- els.parishModalClose.addEventListener("click",closeParishModal);els.parishModal.addEventListener("click",e=>{if(e.target.dataset.parishClose)closeParishModal();});
- document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeModal();closeParishModal();}});
+ // La tabla de proyectos fue retirada oficialmente del Dashboard.
+ // Conservamos únicamente los modales de detalle y de inversión.
+ els.modalClose?.addEventListener("click",closeModal);
+ els.modal?.addEventListener("click",e=>{if(e.target.dataset.close)closeModal();});
+ els.parishModalClose?.addEventListener("click",closeParishModal);
+ els.parishModal?.addEventListener("click",e=>{if(e.target.dataset.parishClose)closeParishModal();});
+ document.addEventListener("keydown",e=>{
+   if(e.key==="Escape"){
+     closeModal();
+     closeParishModal();
+   }
+ });
 }
 
 /* =========================================================
@@ -1422,6 +1422,7 @@ let dbClient=null;
 let dbReady=false;
 let matrixRows=[];
 let currentSession=null;
+let pendingProtectedAction=null;
 
 function supabaseConfigured(){
  const cfg=window.SUPABASE_CONFIG||{};
@@ -1555,8 +1556,37 @@ function nextProjectItem(){
  return max+1;
 }
 
+
+function showAuthPrompt(action=null){
+ pendingProtectedAction=action;
+ const login=document.getElementById("matrixLoginPanel");
+ const status=document.getElementById("matrixLoginStatus");
+ if(status) status.textContent="";
+ if(login) login.hidden=false;
+ setTimeout(()=>document.getElementById("matrixEmail")?.focus(),50);
+}
+
+function hideAuthPrompt(){
+ const login=document.getElementById("matrixLoginPanel");
+ if(login) login.hidden=true;
+ const status=document.getElementById("matrixLoginStatus");
+ if(status) status.textContent="";
+}
+
+function requireEditor(action){
+ if(currentSession){
+   action();
+   return;
+ }
+ showAuthPrompt(action);
+}
+
 function openCrud(row=null){
- if(!dbReady || !currentSession) return;
+ if(!dbReady) return;
+ if(!currentSession){
+   requireEditor(()=>openCrud(row));
+   return;
+ }
  setFormFromRow(row);
  document.getElementById("crudTitle").textContent=row?"Editar proyecto":"Agregar proyecto";
  document.getElementById("crudStatus").textContent="";
@@ -1625,7 +1655,11 @@ async function saveProject(evt){
 }
 
 async function deleteProject(id,projectName){
- if(!dbReady || !currentSession) return;
+ if(!dbReady) return;
+ if(!currentSession){
+   requireEditor(()=>deleteProject(id,projectName));
+   return;
+ }
  const ok=confirm(`¿Eliminar definitivamente el proyecto?\n\n${projectName}\n\nTambién se eliminarán sus archivos multimedia. Esta acción no se puede deshacer.`);
  if(!ok) return;
 
@@ -1653,7 +1687,6 @@ async function afterDatabaseChange(){
  await refreshProjectsFromDatabase();
  renderKpis();
  renderCharts();
- renderTable();
  renderMatrix();
 
  if(projectMapInstance && projectMapReady && projectMapInstance.getSource("proyectos")){
@@ -2022,6 +2055,7 @@ function renderMatrix(){
      <td>${esc(r.fecha_entrega||"—")}</td>
      <td>${r.avance==null?"—":`${esc(r.avance)}%`}</td>
      <td class="matrix-actions-cell">
+       <button class="row-action detail" type="button" data-detail-item="${r.item}">◉ Ver detalle</button>
        <button class="row-action map" type="button" data-map-id="${r.id}" ${hasMap?"":"disabled"}>⌖ Ver en mapa</button>
        <button class="row-action edit" type="button" data-edit-id="${r.id}">✎ Editar</button>
        <button class="row-action delete" type="button" data-delete-id="${r.id}">🗑 Eliminar</button>
@@ -2029,6 +2063,9 @@ function renderMatrix(){
    </tr>`;
  }).join(""):`<tr><td colspan="10" style="padding:30px;text-align:center;color:#667085">No existen proyectos con los filtros seleccionados.</td></tr>`;
 
+ tbody.querySelectorAll("[data-detail-item]").forEach(btn=>{
+   btn.addEventListener("click",()=>openModal(btn.dataset.detailItem));
+ });
  tbody.querySelectorAll("[data-map-id]").forEach(btn=>{
    btn.addEventListener("click",()=>focusProjectOnMap(btn.dataset.mapId));
  });
@@ -2060,14 +2097,21 @@ async function matrixLogin(){
    status.textContent=error.message;
    return;
  }
+
  currentSession=data.session;
  status.textContent="";
+ hideAuthPrompt();
  await syncAuthUI();
+
+ const action=pendingProtectedAction;
+ pendingProtectedAction=null;
+ if(action) setTimeout(action,50);
 }
 
 async function matrixLogout(){
  if(dbClient) await dbClient.auth.signOut();
  currentSession=null;
+ pendingProtectedAction=null;
  await syncAuthUI();
 }
 
@@ -2077,8 +2121,9 @@ async function syncAuthUI(){
  const add=document.getElementById("addProjectBtn");
  const logout=document.getElementById("matrixLogoutBtn");
 
+ // La matriz es pública: siempre se muestra cuando Supabase está conectado.
  if(!dbReady){
-   if(login) login.hidden=false;
+   if(login) login.hidden=true;
    if(panel) panel.hidden=true;
    if(add) add.hidden=true;
    if(logout) logout.hidden=true;
@@ -2088,19 +2133,16 @@ async function syncAuthUI(){
  const {data}=await dbClient.auth.getSession();
  currentSession=data.session||null;
 
- if(currentSession){
-   login.hidden=true;
-   panel.hidden=false;
-   add.hidden=false;
-   logout.hidden=false;
-   await refreshProjectsFromDatabase();
-   renderMatrix();
- }else{
-   login.hidden=false;
-   panel.hidden=true;
-   add.hidden=true;
-   logout.hidden=true;
- }
+ if(login) login.hidden=true;
+ if(panel) panel.hidden=false;
+
+ // El botón Agregar permanece visible para todos; si no hay sesión,
+ // solicitará credenciales al hacer clic.
+ if(add) add.hidden=false;
+ if(logout) logout.hidden=!currentSession;
+
+ await refreshProjectsFromDatabase();
+ renderMatrix();
 }
 
 function selectView(viewId){
@@ -2127,6 +2169,7 @@ function bindAdminUI(){
  });
 
  document.getElementById("matrixLoginBtn")?.addEventListener("click",matrixLogin);
+ document.getElementById("matrixLoginCancelBtn")?.addEventListener("click",()=>{pendingProtectedAction=null;hideAuthPrompt();});
  document.getElementById("matrixPassword")?.addEventListener("keydown",e=>{
    if(e.key==="Enter") matrixLogin();
  });
@@ -2165,7 +2208,13 @@ function bindAdminUI(){
    if(e.target.dataset.crudClose) closeCrud();
  });
  document.getElementById("projectForm")?.addEventListener("submit",saveProject);
- document.addEventListener("keydown",e=>{if(e.key==="Escape") closeCrud();});
+ document.addEventListener("keydown",e=>{
+   if(e.key==="Escape"){
+     closeCrud();
+     hideAuthPrompt();
+     closeMediaViewer();
+   }
+ });
 
  if(dbReady && dbClient){
    dbClient.auth.onAuthStateChange((_event,session)=>{
@@ -2189,7 +2238,6 @@ async function init(){
  fillSelect(els.parish,unique("parroquia"));
  renderKpis();
  renderCharts();
- renderTable();
  bind();
  bindAdminUI();
 
