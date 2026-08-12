@@ -746,6 +746,169 @@
       .map-media-panel.open{transform:translateY(0)}
     }
 
+  
+    /* =========================================================
+       V18 - CARRUSEL MULTIMEDIA EN MAPA
+       ========================================================= */
+    .map-media-panel-body{
+      display:flex !important;
+      flex-direction:column;
+      overflow:hidden !important;
+      padding:10px !important;
+    }
+    .map-media-carousel{
+      position:relative;
+      flex:1;
+      min-height:0;
+      display:grid;
+      grid-template-rows:1fr auto;
+      gap:10px;
+    }
+    .map-media-stage{
+      position:relative;
+      min-height:0;
+      border:1px solid #e0e6ef;
+      border-radius:9px;
+      background:#f7f9fc;
+      overflow:hidden;
+      display:grid;
+      place-items:center;
+    }
+    .map-media-stage img{
+      width:100%;
+      height:100%;
+      object-fit:contain;
+      display:block;
+      background:#f7f9fc;
+    }
+    .map-media-stage-placeholder{
+      display:grid;
+      place-items:center;
+      width:100%;
+      height:100%;
+      color:#35547f;
+      text-align:center;
+      padding:20px;
+      font-weight:900;
+      font-size:22px;
+    }
+    .map-media-stage-placeholder small{
+      display:block;
+      margin-top:8px;
+      font-size:10px;
+      color:#6f7d91;
+      font-weight:700;
+    }
+    .map-media-nav{
+      position:absolute;
+      top:50%;
+      transform:translateY(-50%);
+      z-index:4;
+      width:34px;
+      height:34px;
+      border:0;
+      border-radius:50%;
+      background:rgba(13,42,91,.86);
+      color:#fff;
+      font-size:20px;
+      line-height:1;
+      cursor:pointer;
+      display:grid;
+      place-items:center;
+      box-shadow:0 4px 12px rgba(13,42,91,.22);
+    }
+    .map-media-nav:hover{background:#0d2a5b}
+    .map-media-nav.prev{left:8px}
+    .map-media-nav.next{right:8px}
+    .map-media-open{
+      position:absolute;
+      left:50%;
+      bottom:10px;
+      transform:translateX(-50%);
+      z-index:4;
+      border:0;
+      border-radius:6px;
+      padding:7px 10px;
+      background:rgba(13,42,91,.92);
+      color:#fff;
+      font-size:9px;
+      font-weight:800;
+      cursor:pointer;
+      white-space:nowrap;
+    }
+    .map-media-thumbs{
+      display:flex;
+      gap:7px;
+      overflow-x:auto;
+      padding-bottom:2px;
+      scrollbar-width:thin;
+    }
+    .map-media-thumb{
+      flex:0 0 68px;
+      height:50px;
+      border:2px solid transparent;
+      border-radius:6px;
+      overflow:hidden;
+      background:#e9eef5;
+      display:grid;
+      place-items:center;
+      color:#35547f;
+      font-size:9px;
+      font-weight:900;
+      cursor:pointer;
+      padding:0;
+    }
+    .map-media-thumb.active{
+      border-color:#0d2a5b;
+      box-shadow:0 0 0 1px rgba(13,42,91,.15);
+    }
+    .map-media-thumb img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+    .map-media-counter{
+      text-align:center;
+      font-size:9px;
+      color:#667085;
+      margin-top:2px;
+    }
+
+    /* Navegación del visor modal con flechas */
+    .media-viewer-nav{
+      position:absolute;
+      top:50%;
+      transform:translateY(-50%);
+      z-index:6;
+      width:44px;
+      height:44px;
+      border:0;
+      border-radius:50%;
+      background:rgba(13,42,91,.82);
+      color:#fff;
+      font-size:26px;
+      cursor:pointer;
+      display:grid;
+      place-items:center;
+      box-shadow:0 6px 20px rgba(0,0,0,.25);
+    }
+    .media-viewer-nav:hover{background:#0d2a5b}
+    .media-viewer-nav.prev{left:14px}
+    .media-viewer-nav.next{right:14px}
+    .media-viewer-count{
+      position:absolute;
+      right:14px;
+      bottom:12px;
+      z-index:7;
+      background:rgba(13,42,91,.76);
+      color:#fff;
+      padding:5px 8px;
+      border-radius:5px;
+      font-size:9px;
+      font-weight:800;
+    }
+
   </style>
 </head>
 <body>
@@ -973,6 +1136,10 @@ let matrixCurrentPage=1;
 let matrixPageSize=10;
 let currentProjectMedia=[];
 let panoramaViewerInstance=null;
+let mapMediaCarouselItems=[];
+let mapMediaCarouselIndex=0;
+let viewerCarouselItems=[];
+let viewerCarouselIndex=0;
 
 let categoryChart,statusChart,parishChart,parishMoneyChart;
 
@@ -1889,40 +2056,83 @@ function renderMapMediaPanel(projectProps,media){
  title.textContent=projectProps?.proyecto||"Archivos del proyecto";
  meta.textContent=[projectProps?.parroquia||"",projectProps?.estado||""].filter(Boolean).join(" · ");
 
- if(!media?.length){
+ mapMediaCarouselItems=media||[];
+ mapMediaCarouselIndex=0;
+
+ if(!mapMediaCarouselItems.length){
    body.innerHTML='<div class="map-media-panel-empty">Este proyecto todavía no tiene imágenes ni archivos cargados.</div>';
  }else{
-   body.innerHTML=media.map(m=>{
-     const url=mediaPublicUrl(m.storage_path);
-     const preview=m.media_type==="image"
-       ? `<img src="${esc(url)}" alt="${esc(m.title||m.file_name||"Imagen")}">`
-       : `<span>${esc(mediaIcon(m.media_type))}</span>`;
-     return `<article class="map-media-card" data-map-panel-media="${m.id}" tabindex="0" role="button">
-       <div class="map-media-card-preview">${preview}</div>
-       <div class="map-media-card-info">
-         <strong>${esc(m.title||m.file_name||"Archivo")}</strong>
-         <span>${esc(mediaTypeLabel(m.media_type))}${m.file_name?` · ${esc(m.file_name)}`:""}</span>
+   body.innerHTML=`
+     <div class="map-media-carousel">
+       <div id="mapMediaStage" class="map-media-stage"></div>
+       <div>
+         <div id="mapMediaThumbs" class="map-media-thumbs"></div>
+         <div id="mapMediaCounter" class="map-media-counter"></div>
        </div>
-     </article>`;
-   }).join("");
-
-   body.querySelectorAll("[data-map-panel-media]").forEach(card=>{
-     const open=()=>{
-       const record=media.find(m=>String(m.id)===String(card.dataset.mapPanelMedia));
-       if(record) openMediaViewer(record);
-     };
-     card.addEventListener("click",open);
-     card.addEventListener("keydown",e=>{
-       if(e.key==="Enter"||e.key===" "){
-         e.preventDefault();
-         open();
-       }
-     });
-   });
+     </div>`;
+   renderMapMediaCarousel();
  }
 
  panel.classList.add("open");
  panel.setAttribute("aria-hidden","false");
+}
+
+function renderMapMediaCarousel(){
+ const stage=document.getElementById("mapMediaStage");
+ const thumbs=document.getElementById("mapMediaThumbs");
+ const counter=document.getElementById("mapMediaCounter");
+ if(!stage||!thumbs||!counter||!mapMediaCarouselItems.length) return;
+
+ const record=mapMediaCarouselItems[mapMediaCarouselIndex];
+ const url=mediaPublicUrl(record.storage_path);
+
+ let content="";
+ if(record.media_type==="image"){
+   content=`<img src="${esc(url)}" alt="${esc(record.title||record.file_name||"Imagen")}">`;
+ }else{
+   content=`<div class="map-media-stage-placeholder">
+     ${esc(mediaIcon(record.media_type))}
+     <small>${esc(record.title||record.file_name||mediaTypeLabel(record.media_type))}</small>
+   </div>`;
+ }
+
+ stage.innerHTML=`
+   ${content}
+   ${mapMediaCarouselItems.length>1?'<button class="map-media-nav prev" type="button" aria-label="Anterior">‹</button>':""}
+   ${mapMediaCarouselItems.length>1?'<button class="map-media-nav next" type="button" aria-label="Siguiente">›</button>':""}
+   <button class="map-media-open" type="button">Abrir ${esc(mediaTypeLabel(record.media_type))}</button>
+ `;
+
+ stage.querySelector(".map-media-nav.prev")?.addEventListener("click",()=>{
+   mapMediaCarouselIndex=(mapMediaCarouselIndex-1+mapMediaCarouselItems.length)%mapMediaCarouselItems.length;
+   renderMapMediaCarousel();
+ });
+ stage.querySelector(".map-media-nav.next")?.addEventListener("click",()=>{
+   mapMediaCarouselIndex=(mapMediaCarouselIndex+1)%mapMediaCarouselItems.length;
+   renderMapMediaCarousel();
+ });
+ stage.querySelector(".map-media-open")?.addEventListener("click",()=>{
+   openMediaViewer(record,mapMediaCarouselItems,mapMediaCarouselIndex);
+ });
+
+ thumbs.innerHTML=mapMediaCarouselItems.map((m,i)=>{
+   const thumbUrl=mediaPublicUrl(m.storage_path);
+   const preview=m.media_type==="image"
+     ? `<img src="${esc(thumbUrl)}" alt="">`
+     : `<span>${esc(mediaIcon(m.media_type))}</span>`;
+   return `<button class="map-media-thumb ${i===mapMediaCarouselIndex?"active":""}" type="button" data-media-index="${i}" title="${esc(m.title||m.file_name||mediaTypeLabel(m.media_type))}">
+     ${preview}
+   </button>`;
+ }).join("");
+
+ thumbs.querySelectorAll("[data-media-index]").forEach(btn=>{
+   btn.addEventListener("click",()=>{
+     mapMediaCarouselIndex=Number(btn.dataset.mediaIndex);
+     renderMapMediaCarousel();
+   });
+ });
+
+ counter.textContent=`${mapMediaCarouselIndex+1} de ${mapMediaCarouselItems.length}`;
 }
 
 function buildMapMediaHtml(media){
@@ -1948,20 +2158,36 @@ function wirePopupMedia(popup,media){
  });
 }
 
-function openMediaViewer(record){
+function openMediaViewer(record,items=null,startIndex=null){
  const viewer=document.getElementById("mediaViewer");
+ if(!viewer) return;
+
+ viewerCarouselItems=items?.length?items:[record];
+ viewerCarouselIndex=startIndex!=null?startIndex:Math.max(0,viewerCarouselItems.findIndex(m=>String(m.id)===String(record.id)));
+ if(viewerCarouselIndex<0) viewerCarouselIndex=0;
+
+ renderMediaViewerSlide();
+
+ viewer.classList.add("open");
+ viewer.setAttribute("aria-hidden","false");
+ document.body.style.overflow="hidden";
+}
+
+function renderMediaViewerSlide(){
  const body=document.getElementById("mediaViewerBody");
  const title=document.getElementById("mediaViewerTitle");
- if(!viewer||!body) return;
+ if(!body||!viewerCarouselItems.length) return;
 
+ const record=viewerCarouselItems[viewerCarouselIndex];
  const url=mediaPublicUrl(record.storage_path);
- title.textContent=record.title||"Archivo del proyecto";
- body.innerHTML="";
+ title.textContent=record.title||record.file_name||"Archivo del proyecto";
 
  if(panoramaViewerInstance){
    try{panoramaViewerInstance.destroy();}catch(e){}
    panoramaViewerInstance=null;
  }
+
+ body.innerHTML="";
 
  if(record.media_type==="image"){
    body.innerHTML=`<img src="${esc(url)}" alt="${esc(record.title||"Imagen")}">`;
@@ -1984,9 +2210,38 @@ function openMediaViewer(record){
    }
  }
 
- viewer.classList.add("open");
- viewer.setAttribute("aria-hidden","false");
- document.body.style.overflow="hidden";
+ const card=document.querySelector(".media-viewer-card");
+ card?.querySelectorAll(".media-viewer-nav,.media-viewer-count").forEach(el=>el.remove());
+
+ if(viewerCarouselItems.length>1 && card){
+   const prev=document.createElement("button");
+   prev.className="media-viewer-nav prev";
+   prev.type="button";
+   prev.setAttribute("aria-label","Archivo anterior");
+   prev.textContent="‹";
+   prev.addEventListener("click",()=>navigateMediaViewer(-1));
+
+   const next=document.createElement("button");
+   next.className="media-viewer-nav next";
+   next.type="button";
+   next.setAttribute("aria-label","Archivo siguiente");
+   next.textContent="›";
+   next.addEventListener("click",()=>navigateMediaViewer(1));
+
+   const count=document.createElement("div");
+   count.className="media-viewer-count";
+   count.textContent=`${viewerCarouselIndex+1} / ${viewerCarouselItems.length}`;
+
+   card.appendChild(prev);
+   card.appendChild(next);
+   card.appendChild(count);
+ }
+}
+
+function navigateMediaViewer(direction){
+ if(!viewerCarouselItems.length) return;
+ viewerCarouselIndex=(viewerCarouselIndex+direction+viewerCarouselItems.length)%viewerCarouselItems.length;
+ renderMediaViewerSlide();
 }
 
 function closeMediaViewer(){
@@ -1997,6 +2252,8 @@ function closeMediaViewer(){
    try{panoramaViewerInstance.destroy();}catch(e){}
    panoramaViewerInstance=null;
  }
+ viewerCarouselItems=[];
+ viewerCarouselIndex=0;
  document.body.style.overflow="";
 }
 
@@ -2034,7 +2291,7 @@ function renderProjectMediaList(){
  list.querySelectorAll("[data-open-media]").forEach(btn=>{
    btn.addEventListener("click",()=>{
      const r=currentProjectMedia.find(m=>String(m.id)===String(btn.dataset.openMedia));
-     if(r) openMediaViewer(r);
+     if(r) openMediaViewer(r,currentProjectMedia,currentProjectMedia.findIndex(m=>String(m.id)===String(r.id)));
    });
  });
  list.querySelectorAll("[data-delete-media]").forEach(btn=>{
@@ -2401,6 +2658,18 @@ function bindAdminUI(){
  });
  document.getElementById("projectForm")?.addEventListener("submit",saveProject);
  document.addEventListener("keydown",e=>{
+   const viewerOpen=document.getElementById("mediaViewer")?.classList.contains("open");
+
+   if(viewerOpen && e.key==="ArrowLeft"){
+     e.preventDefault();
+     navigateMediaViewer(-1);
+     return;
+   }
+   if(viewerOpen && e.key==="ArrowRight"){
+     e.preventDefault();
+     navigateMediaViewer(1);
+     return;
+   }
    if(e.key==="Escape"){
      closeCrud();
      hideAuthPrompt();
