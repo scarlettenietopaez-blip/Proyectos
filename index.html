@@ -1506,27 +1506,55 @@ async function renderProjectMap(){
 
 
 
-     // Etiquetas permanentes de parroquias.
+     // Etiquetas permanentes: UNA sola etiqueta por parroquia.
+     // Algunas parroquias están representadas por más de un feature/polígono
+     // en el GeoJSON. Primero agrupamos por nombre y luego calculamos un
+     // único centro para todo el conjunto.
+     const parishLabelGroups=new Map();
+
      parishGeo.features.forEach(feature=>{
        const props=feature.properties||{};
-       const parishName=props.nombre_mapa||props.nombre||props.nombre_1||"";
+       const parishName=String(
+         props.nombre_mapa||props.nombre||props.nombre_1||""
+       ).trim();
+
        if(!parishName) return;
-       const parishBounds=new maplibregl.LngLatBounds();
+
+       const key=parishName.toUpperCase();
+
+       if(!parishLabelGroups.has(key)){
+         parishLabelGroups.set(key,{
+           name:parishName,
+           bounds:new maplibregl.LngLatBounds()
+         });
+       }
+
+       const group=parishLabelGroups.get(key);
+
        const walkCoords=coords=>{
          if(Array.isArray(coords) && typeof coords[0]==="number"){
-           parishBounds.extend(coords);
+           group.bounds.extend(coords);
          }else if(Array.isArray(coords)){
            coords.forEach(walkCoords);
          }
        };
+
        walkCoords(feature.geometry?.coordinates);
-       if(parishBounds.isEmpty()) return;
+     });
+
+     parishLabelGroups.forEach(group=>{
+       if(group.bounds.isEmpty()) return;
+
        const el=document.createElement("div");
        el.className="parish-map-label";
-       el.textContent=parishName;
-       new maplibregl.Marker({element:el,anchor:"center"})
-         .setLngLat(parishBounds.getCenter())
-         .addTo(map);
+       el.textContent=group.name;
+
+       new maplibregl.Marker({
+         element:el,
+         anchor:"center"
+       })
+       .setLngLat(group.bounds.getCenter())
+       .addTo(map);
      });
 
      map.addSource("proyectos",{type:"geojson",data:projectGeo});
