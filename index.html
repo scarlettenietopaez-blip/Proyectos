@@ -1501,10 +1501,13 @@ async function refreshProjectsFromDatabase(){
 
  const {data,error}=await dbClient
    .from("proyectos")
-   .select("id,item,categoria,parroquia,proyecto,monto,tramite,responsables,estado_original,estado_dashboard,fecha_entrega,cronograma_contractual,avance,coordenadas_x,coordenadas_y,area_intervencion,created_at,updated_at")
+   .select("*")
    .order("item",{ascending:true});
 
- if(error) throw error;
+ if(error){
+   console.error("Error SELECT public.proyectos:",error);
+   throw error;
+ }
 
  matrixRows=data||[];
  projects=matrixRows.map(dbRowToProject);
@@ -1515,6 +1518,7 @@ async function refreshProjectsFromDatabase(){
    fillSelect(els.parish,unique("parroquia"));
    if([...els.parish.options].some(o=>o.value===current)) els.parish.value=current;
  }
+
  return true;
 }
 
@@ -2271,7 +2275,7 @@ init().catch(err=>{
    const warning=document.createElement("div");
    warning.id="supabaseLoadError";
    warning.style.cssText="margin:18px 30px;padding:14px 16px;border:1px solid #f1b7b4;background:#fff1f0;color:#9a2020;border-radius:9px;font-size:12px;font-weight:700";
-   warning.textContent="No se pudo cargar la información oficial desde Supabase. Revisa la conexión o la estructura de la tabla proyectos.";
+   warning.textContent="No se pudo cargar la información oficial desde Supabase. La conexión existe, pero la Data API devolvió un error al consultar public.proyectos.";
    dashboard.querySelector("main")?.prepend(warning);
  }
 });
