@@ -1497,23 +1497,25 @@ function dbRowToProject(r){
 }
 
 async function refreshProjectsFromDatabase(){
- if(!dbReady) return;
+ if(!dbReady) throw new Error("Supabase no está disponible.");
+
  const {data,error}=await dbClient
    .from("proyectos")
-   .select("*")
+   .select("id,item,categoria,parroquia,proyecto,monto,tramite,responsables,estado_original,estado_dashboard,fecha_entrega,cronograma_contractual,avance,coordenadas_x,coordenadas_y,area_intervencion,created_at,updated_at")
    .order("item",{ascending:true});
+
  if(error) throw error;
 
  matrixRows=data||[];
  projects=matrixRows.map(dbRowToProject);
 
- // Reconstruir selector de parroquia.
  if(els.parish){
    const current=els.parish.value;
    els.parish.innerHTML='<option value="">Todas</option>';
    fillSelect(els.parish,unique("parroquia"));
    if([...els.parish.options].some(o=>o.value===current)) els.parish.value=current;
  }
+ return true;
 }
 
 function projectToDbPayload(){
@@ -2019,7 +2021,8 @@ async function showFocusedProjectPopup(row,loc){
    <strong>${esc(p.proyecto)}</strong><br>
    <span><b>Parroquia:</b> ${esc(p.parroquia||"—")}</span><br>
    <span><b>Estado:</b> ${esc(groupedStatus(p))}</span><br>
-   <span><b>Monto:</b> ${esc(amount(p)>0?moneyValue(amount(p)):"—")}</span>
+   <span><b>Monto:</b> ${esc(amount(p)>0?moneyValue(amount(p)):"—")}</span><br>
+   <span><b>Área de intervención:</b> ${esc(p["Área de Intervención"]||"—")}</span>
    ${buildMapMediaHtml(media)}
  </div>`;
  const popup=new maplibregl.Popup({closeButton:true,offset:12})
@@ -2236,13 +2239,11 @@ function bindAdminUI(){
 async function init(){
  await initDatabase();
 
- if(dbReady){
-   await refreshProjectsFromDatabase();
- }else{
-   const res=await fetch("./data/proyectos.csv",{cache:"no-store"});
-   if(!res.ok) throw new Error("No se pudo cargar data/proyectos.csv");
-   projects=parseCSV(await res.text()).map(p=>({...p,item:Number(p.item)}));
+ if(!dbReady){
+   throw new Error("No se pudo establecer conexión con Supabase.");
  }
+
+ await refreshProjectsFromDatabase();
 
  fillSelect(els.parish,unique("parroquia"));
  renderKpis();
@@ -2256,7 +2257,24 @@ async function init(){
 
  await syncAuthUI();
 }
-init().catch(err=>{console.error(err);els.body.innerHTML=`<tr><td colspan="9" style="padding:30px;text-align:center">No se pudo cargar la información.</td></tr>`;});
+init().catch(err=>{
+ console.error("Error cargando información oficial desde Supabase:",err);
+ const notice=document.getElementById("matrixConfigNotice");
+ if(notice){
+   notice.hidden=false;
+   notice.className="db-message error";
+   notice.textContent="No se pudieron cargar los proyectos desde Supabase. No se mostrarán datos de respaldo para evitar información desactualizada.";
+ }
+
+ const dashboard=document.getElementById("dashboardView");
+ if(dashboard && !document.getElementById("supabaseLoadError")){
+   const warning=document.createElement("div");
+   warning.id="supabaseLoadError";
+   warning.style.cssText="margin:18px 30px;padding:14px 16px;border:1px solid #f1b7b4;background:#fff1f0;color:#9a2020;border-radius:9px;font-size:12px;font-weight:700";
+   warning.textContent="No se pudo cargar la información oficial desde Supabase. Revisa la conexión o la estructura de la tabla proyectos.";
+   dashboard.querySelector("main")?.prepend(warning);
+ }
+});
 </script>
 
 <div id="crudModal" class="crud-modal" aria-hidden="true">
@@ -2333,7 +2351,7 @@ init().catch(err=>{console.error(err);els.body.innerHTML=`<tr><td colspan="9" st
           <textarea id="fCoordY" class="field-control" placeholder="Admite una o varias ubicaciones"></textarea>
         </label>
         <label class="field-label span2">Área de Intervención
-          <textarea id="fAreaIntervencion" class="field-control" placeholder="Ej. 4615 m2, NO, o varias áreas por ubicación"></textarea>
+          <textarea id="fAreaIntervencion" class="field-control" placeholder="Ej. 4615 m2, 0.75 km, NO o POR DEFINIR"></textarea>
         </label>
         <section class="media-manager" id="mediaManager">
           <h4>Archivos del proyecto</h4>
