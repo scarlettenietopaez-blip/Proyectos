@@ -2421,7 +2421,7 @@ function openMediaViewer(record,items=null,startIndex=null){
 
 function updateImageZoomUI(){
  const label=document.getElementById("mediaZoomLabel");
- if(label) label.textContent=`${Math.round(mediaImageZoom*100)}%`;
+ if(label) label.textContent=mediaImageFit?"AJUSTADO":`${Math.round(mediaImageZoom*100)}%`;
 
  const img=document.querySelector("#mediaViewerBody img.media-natural-image");
  const body=document.getElementById("mediaViewerBody");
@@ -2483,8 +2483,8 @@ function renderMediaViewerSlide(){
 
  if(record.media_type==="image"){
    mediaImageZoom=1;
-   mediaImageFit=false;
-   body.classList.add("image-scroll-mode");
+   mediaImageFit=true;
+   body.classList.add("image-fit-mode");
    body.innerHTML=`<div class="natural-image-wrap"><img class="media-natural-image" src="${esc(url)}" alt="${esc(record.title||"Imagen")}"></div>`;
    setTimeout(updateImageZoomUI,0);
  }else if(record.media_type==="pdf"){
