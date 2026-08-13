@@ -913,6 +913,222 @@
     /* V18.2: la programación genera una sola etiqueta por parroquia */
     .parish-map-label{user-select:none}
 
+  
+    /* =========================================================
+       V19 - VISOR DE IMÁGENES CON ZOOM Y DESPLAZAMIENTO
+       ========================================================= */
+    .media-viewer-head{
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .media-viewer-toolbar{
+      display:none;
+      align-items:center;
+      gap:6px;
+      margin-left:auto;
+      margin-right:8px;
+    }
+    .media-viewer-toolbar.active{display:flex}
+    .media-zoom-btn{
+      height:30px;
+      min-width:32px;
+      padding:0 9px;
+      border:1px solid #cfd8e6;
+      border-radius:6px;
+      background:#fff;
+      color:#0d2a5b;
+      font-size:11px;
+      font-weight:800;
+      cursor:pointer;
+    }
+    .media-zoom-btn:hover{background:#f3f6fa}
+    .media-zoom-label{
+      min-width:48px;
+      text-align:center;
+      color:#475467;
+      font-size:10px;
+      font-weight:800;
+    }
+
+    .media-viewer-body.image-scroll-mode{
+      display:block !important;
+      overflow:auto !important;
+      background:#0f1726 !important;
+      padding:18px;
+      text-align:center;
+    }
+    .media-viewer-body.image-scroll-mode .natural-image-wrap{
+      min-width:max-content;
+      min-height:max-content;
+      display:inline-block;
+      text-align:left;
+    }
+    .media-viewer-body.image-scroll-mode img.media-natural-image{
+      display:block;
+      width:auto;
+      height:auto;
+      max-width:none !important;
+      max-height:none !important;
+      object-fit:initial !important;
+      transform-origin:top left;
+      margin:0;
+      background:#fff;
+      box-shadow:0 10px 30px rgba(0,0,0,.28);
+    }
+    .media-viewer-body.image-fit-mode{
+      overflow:auto !important;
+      background:#0f1726 !important;
+      padding:14px;
+    }
+    .media-viewer-body.image-fit-mode img.media-natural-image{
+      max-width:100% !important;
+      max-height:100% !important;
+      width:auto;
+      height:auto;
+      object-fit:contain;
+      transform:none !important;
+      margin:auto;
+      display:block;
+    }
+
+    @media(max-width:760px){
+      .media-viewer-toolbar{
+        order:3;
+        width:100%;
+        margin:0;
+        justify-content:center;
+      }
+      .media-viewer-card{
+        height:calc(100vh - 18px);
+        margin:9px auto;
+      }
+    }
+
+  
+    /* =========================================================
+       V20 - PANEL MULTIMEDIA EN LISTA VERTICAL
+       ========================================================= */
+    .map-media-panel-head{
+      flex-wrap:wrap;
+    }
+
+    .map-media-open-top{
+      width:100%;
+      height:34px;
+      border:0;
+      border-radius:6px;
+      background:#0d2a5b;
+      color:#fff;
+      font-size:10px;
+      font-weight:800;
+      cursor:pointer;
+      margin-top:8px;
+    }
+    .map-media-open-top:hover{background:#153f7a}
+    .map-media-open-top:disabled{
+      opacity:.45;
+      cursor:not-allowed;
+    }
+
+    .map-media-panel-body{
+      display:block !important;
+      overflow-y:auto !important;
+      overflow-x:hidden !important;
+      padding:10px !important;
+      scrollbar-width:thin;
+      scrollbar-color:#aebbd0 #eef2f7;
+    }
+    .map-media-panel-body::-webkit-scrollbar{width:8px}
+    .map-media-panel-body::-webkit-scrollbar-track{background:#eef2f7;border-radius:8px}
+    .map-media-panel-body::-webkit-scrollbar-thumb{background:#aebbd0;border-radius:8px}
+
+    .map-media-list{
+      display:grid;
+      gap:9px;
+    }
+
+    .map-media-list-item{
+      position:relative;
+      width:100%;
+      min-height:84px;
+      padding:0;
+      border:2px solid transparent;
+      border-radius:8px;
+      overflow:hidden;
+      background:#e9eef5;
+      cursor:pointer;
+      text-align:left;
+      transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease;
+    }
+    .map-media-list-item:hover{
+      border-color:#9fb6d8;
+      box-shadow:0 5px 14px rgba(13,42,91,.12);
+      transform:translateY(-1px);
+    }
+    .map-media-list-item.active{
+      border-color:#0d2a5b;
+      box-shadow:0 0 0 1px rgba(13,42,91,.12);
+    }
+
+    .map-media-list-item img{
+      width:100%;
+      height:118px;
+      object-fit:cover;
+      display:block;
+      background:#f7f9fc;
+    }
+
+    .map-media-file-placeholder{
+      height:84px;
+      display:grid;
+      place-items:center;
+      background:#f2f5f9;
+      color:#35547f;
+      font-size:15px;
+      font-weight:900;
+    }
+
+    .map-media-index-badge{
+      position:absolute;
+      left:7px;
+      top:7px;
+      min-width:22px;
+      height:22px;
+      padding:0 6px;
+      border-radius:12px;
+      background:rgba(13,42,91,.88);
+      color:#fff;
+      font-size:9px;
+      font-weight:800;
+      display:grid;
+      place-items:center;
+    }
+
+    .map-media-type-badge{
+      position:absolute;
+      right:7px;
+      top:7px;
+      padding:4px 6px;
+      border-radius:4px;
+      background:rgba(255,255,255,.9);
+      color:#0d2a5b;
+      font-size:8px;
+      font-weight:900;
+      box-shadow:0 1px 4px rgba(13,42,91,.12);
+    }
+
+    .map-media-panel-note{
+      text-align:center;
+    }
+
+    /* El panel ya no usa el carrusel interno de V18 */
+    .map-media-carousel,
+    .map-media-stage,
+    .map-media-thumbs,
+    .map-media-counter{
+      display:none !important;
+    }
+
   </style>
 </head>
 <body>
@@ -1003,14 +1219,15 @@
         <div id="projectsMap" aria-label="Mapa interactivo de proyectos"></div>
         <aside id="mapMediaPanel" class="map-media-panel" aria-hidden="true">
           <div class="map-media-panel-head">
-            <div>
+            <div style="flex:1;min-width:0">
               <strong id="mapMediaProjectTitle">Archivos del proyecto</strong>
               <span id="mapMediaProjectMeta">Selecciona un proyecto en el mapa</span>
             </div>
             <button id="mapMediaPanelClose" class="map-media-panel-close" type="button" aria-label="Cerrar panel">×</button>
+            <button id="mapMediaOpenTop" class="map-media-open-top" type="button" disabled>Abrir imágenes</button>
           </div>
           <div id="mapMediaPanelBody" class="map-media-panel-body"></div>
-          <div class="map-media-panel-note">Haz clic en una imagen, PDF, video o panorama 360° para abrirlo.</div>
+          <div class="map-media-panel-note">Selecciona un archivo de la lista y usa “Abrir imágenes” para visualizarlo en pantalla completa.</div>
         </aside>
       </div>
     </section>
@@ -1144,6 +1361,8 @@ let mapMediaCarouselItems=[];
 let mapMediaCarouselIndex=0;
 let viewerCarouselItems=[];
 let viewerCarouselIndex=0;
+let mediaImageZoom=1;
+let mediaImageFit=false;
 
 let categoryChart,statusChart,parishChart,parishMoneyChart;
 
@@ -2100,6 +2319,7 @@ function renderMapMediaPanel(projectProps,media){
  const title=document.getElementById("mapMediaProjectTitle");
  const meta=document.getElementById("mapMediaProjectMeta");
  const body=document.getElementById("mapMediaPanelBody");
+ const openBtn=document.getElementById("mapMediaOpenTop");
  if(!panel||!body) return;
 
  title.textContent=projectProps?.proyecto||"Archivos del proyecto";
@@ -2108,80 +2328,56 @@ function renderMapMediaPanel(projectProps,media){
  mapMediaCarouselItems=media||[];
  mapMediaCarouselIndex=0;
 
+ if(openBtn){
+   openBtn.disabled=!mapMediaCarouselItems.length;
+ }
+
  if(!mapMediaCarouselItems.length){
    body.innerHTML='<div class="map-media-panel-empty">Este proyecto todavía no tiene imágenes ni archivos cargados.</div>';
  }else{
-   body.innerHTML=`
-     <div class="map-media-carousel">
-       <div id="mapMediaStage" class="map-media-stage"></div>
-       <div>
-         <div id="mapMediaThumbs" class="map-media-thumbs"></div>
-         <div id="mapMediaCounter" class="map-media-counter"></div>
-       </div>
-     </div>`;
-   renderMapMediaCarousel();
+   body.innerHTML=`<div id="mapMediaList" class="map-media-list"></div>`;
+   renderMapMediaList();
  }
 
  panel.classList.add("open");
  panel.setAttribute("aria-hidden","false");
 }
 
-function renderMapMediaCarousel(){
- const stage=document.getElementById("mapMediaStage");
- const thumbs=document.getElementById("mapMediaThumbs");
- const counter=document.getElementById("mapMediaCounter");
- if(!stage||!thumbs||!counter||!mapMediaCarouselItems.length) return;
+function renderMapMediaList(){
+ const list=document.getElementById("mapMediaList");
+ if(!list||!mapMediaCarouselItems.length) return;
 
- const record=mapMediaCarouselItems[mapMediaCarouselIndex];
- const url=mediaPublicUrl(record.storage_path);
-
- let content="";
- if(record.media_type==="image"){
-   content=`<img src="${esc(url)}" alt="${esc(record.title||record.file_name||"Imagen")}">`;
- }else{
-   content=`<div class="map-media-stage-placeholder">
-     ${esc(mediaIcon(record.media_type))}
-     <small>${esc(record.title||record.file_name||mediaTypeLabel(record.media_type))}</small>
-   </div>`;
- }
-
- stage.innerHTML=`
-   ${content}
-   ${mapMediaCarouselItems.length>1?'<button class="map-media-nav prev" type="button" aria-label="Anterior">‹</button>':""}
-   ${mapMediaCarouselItems.length>1?'<button class="map-media-nav next" type="button" aria-label="Siguiente">›</button>':""}
-   <button class="map-media-open" type="button">Abrir ${esc(mediaTypeLabel(record.media_type))}</button>
- `;
-
- stage.querySelector(".map-media-nav.prev")?.addEventListener("click",()=>{
-   mapMediaCarouselIndex=(mapMediaCarouselIndex-1+mapMediaCarouselItems.length)%mapMediaCarouselItems.length;
-   renderMapMediaCarousel();
- });
- stage.querySelector(".map-media-nav.next")?.addEventListener("click",()=>{
-   mapMediaCarouselIndex=(mapMediaCarouselIndex+1)%mapMediaCarouselItems.length;
-   renderMapMediaCarousel();
- });
- stage.querySelector(".map-media-open")?.addEventListener("click",()=>{
-   openMediaViewer(record,mapMediaCarouselItems,mapMediaCarouselIndex);
- });
-
- thumbs.innerHTML=mapMediaCarouselItems.map((m,i)=>{
-   const thumbUrl=mediaPublicUrl(m.storage_path);
+ list.innerHTML=mapMediaCarouselItems.map((m,i)=>{
+   const url=mediaPublicUrl(m.storage_path);
    const preview=m.media_type==="image"
-     ? `<img src="${esc(thumbUrl)}" alt="">`
-     : `<span>${esc(mediaIcon(m.media_type))}</span>`;
-   return `<button class="map-media-thumb ${i===mapMediaCarouselIndex?"active":""}" type="button" data-media-index="${i}" title="${esc(m.title||m.file_name||mediaTypeLabel(m.media_type))}">
-     ${preview}
-   </button>`;
+     ? `<img src="${esc(url)}" alt="${esc(m.title||m.file_name||"Imagen")}">`
+     : `<div class="map-media-file-placeholder">${esc(mediaIcon(m.media_type))}</div>`;
+
+   return `<button class="map-media-list-item ${i===mapMediaCarouselIndex?"active":""}"
+            type="button"
+            data-media-index="${i}"
+            title="${esc(m.title||m.file_name||mediaTypeLabel(m.media_type))}">
+       ${preview}
+       <span class="map-media-index-badge">${i+1}</span>
+       <span class="map-media-type-badge">${esc(mediaTypeLabel(m.media_type))}</span>
+     </button>`;
  }).join("");
 
- thumbs.querySelectorAll("[data-media-index]").forEach(btn=>{
+ list.querySelectorAll("[data-media-index]").forEach(btn=>{
    btn.addEventListener("click",()=>{
      mapMediaCarouselIndex=Number(btn.dataset.mediaIndex);
-     renderMapMediaCarousel();
+     renderMapMediaList();
+
+     const active=btn;
+     active?.scrollIntoView({block:"nearest",behavior:"smooth"});
    });
  });
+}
 
- counter.textContent=`${mapMediaCarouselIndex+1} de ${mapMediaCarouselItems.length}`;
+function openSelectedMapMedia(){
+ if(!mapMediaCarouselItems.length) return;
+ const record=mapMediaCarouselItems[mapMediaCarouselIndex]||mapMediaCarouselItems[0];
+ openMediaViewer(record,mapMediaCarouselItems,mapMediaCarouselIndex);
 }
 
 function buildMapMediaHtml(media){
@@ -2222,6 +2418,49 @@ function openMediaViewer(record,items=null,startIndex=null){
  document.body.style.overflow="hidden";
 }
 
+
+function updateImageZoomUI(){
+ const label=document.getElementById("mediaZoomLabel");
+ if(label) label.textContent=`${Math.round(mediaImageZoom*100)}%`;
+
+ const img=document.querySelector("#mediaViewerBody img.media-natural-image");
+ const body=document.getElementById("mediaViewerBody");
+ if(!img||!body) return;
+
+ if(mediaImageFit){
+   body.classList.remove("image-scroll-mode");
+   body.classList.add("image-fit-mode");
+   img.style.transform="none";
+ }else{
+   body.classList.remove("image-fit-mode");
+   body.classList.add("image-scroll-mode");
+   img.style.transform=`scale(${mediaImageZoom})`;
+ }
+}
+
+function setImageZoom(value){
+ mediaImageFit=false;
+ mediaImageZoom=Math.min(4,Math.max(.25,value));
+ updateImageZoomUI();
+}
+
+function resetImageZoom(){
+ mediaImageFit=false;
+ mediaImageZoom=1;
+ updateImageZoomUI();
+
+ const body=document.getElementById("mediaViewerBody");
+ if(body){
+   body.scrollTop=0;
+   body.scrollLeft=0;
+ }
+}
+
+function fitImageToViewer(){
+ mediaImageFit=true;
+ updateImageZoomUI();
+}
+
 function renderMediaViewerSlide(){
  const body=document.getElementById("mediaViewerBody");
  const title=document.getElementById("mediaViewerTitle");
@@ -2231,6 +2470,10 @@ function renderMediaViewerSlide(){
  const url=mediaPublicUrl(record.storage_path);
  title.textContent=record.title||record.file_name||"Archivo del proyecto";
 
+ const toolbar=document.getElementById("mediaViewerToolbar");
+ body.classList.remove("image-scroll-mode","image-fit-mode");
+ if(toolbar) toolbar.classList.toggle("active",record.media_type==="image");
+
  if(panoramaViewerInstance){
    try{panoramaViewerInstance.destroy();}catch(e){}
    panoramaViewerInstance=null;
@@ -2239,7 +2482,11 @@ function renderMediaViewerSlide(){
  body.innerHTML="";
 
  if(record.media_type==="image"){
-   body.innerHTML=`<img src="${esc(url)}" alt="${esc(record.title||"Imagen")}">`;
+   mediaImageZoom=1;
+   mediaImageFit=false;
+   body.classList.add("image-scroll-mode");
+   body.innerHTML=`<div class="natural-image-wrap"><img class="media-natural-image" src="${esc(url)}" alt="${esc(record.title||"Imagen")}"></div>`;
+   setTimeout(updateImageZoomUI,0);
  }else if(record.media_type==="pdf"){
    body.innerHTML=`<iframe src="${esc(url)}" title="${esc(record.title||"PDF")}"></iframe>`;
  }else if(record.media_type==="video"){
@@ -2301,6 +2548,8 @@ function closeMediaViewer(){
    try{panoramaViewerInstance.destroy();}catch(e){}
    panoramaViewerInstance=null;
  }
+ viewerCarouselItems=[];
+ viewerCarouselIndex=0;
  viewerCarouselItems=[];
  viewerCarouselIndex=0;
  document.body.style.overflow="";
@@ -2695,6 +2944,11 @@ function bindAdminUI(){
  });
  document.getElementById("mediaUploadBtn")?.addEventListener("click",uploadProjectMedia);
  document.getElementById("mapMediaPanelClose")?.addEventListener("click",closeMapMediaPanel);
+ document.getElementById("mapMediaOpenTop")?.addEventListener("click",openSelectedMapMedia);
+ document.getElementById("mediaZoomOut")?.addEventListener("click",()=>setImageZoom(mediaImageZoom-.25));
+ document.getElementById("mediaZoomIn")?.addEventListener("click",()=>setImageZoom(mediaImageZoom+.25));
+ document.getElementById("mediaZoomReset")?.addEventListener("click",resetImageZoom);
+ document.getElementById("mediaZoomFit")?.addEventListener("click",fitImageToViewer);
  document.getElementById("mediaViewerClose")?.addEventListener("click",closeMediaViewer);
  document.getElementById("mediaViewer")?.addEventListener("click",e=>{
    if(e.target.dataset.mediaClose) closeMediaViewer();
@@ -2717,6 +2971,21 @@ function bindAdminUI(){
    if(viewerOpen && e.key==="ArrowRight"){
      e.preventDefault();
      navigateMediaViewer(1);
+     return;
+   }
+   if(viewerOpen && (e.key==="+" || e.key==="=")){
+     e.preventDefault();
+     setImageZoom(mediaImageZoom+.25);
+     return;
+   }
+   if(viewerOpen && e.key==="-"){
+     e.preventDefault();
+     setImageZoom(mediaImageZoom-.25);
+     return;
+   }
+   if(viewerOpen && e.key==="0"){
+     e.preventDefault();
+     resetImageZoom();
      return;
    }
    if(e.key==="Escape"){
@@ -2896,6 +3165,13 @@ init().catch(err=>{
   <div class="media-viewer-card">
     <div class="media-viewer-head">
       <strong id="mediaViewerTitle">Archivo</strong>
+      <div id="mediaViewerToolbar" class="media-viewer-toolbar" aria-label="Controles de imagen">
+        <button id="mediaZoomOut" class="media-zoom-btn" type="button" title="Alejar">−</button>
+        <span id="mediaZoomLabel" class="media-zoom-label">100%</span>
+        <button id="mediaZoomIn" class="media-zoom-btn" type="button" title="Acercar">+</button>
+        <button id="mediaZoomReset" class="media-zoom-btn" type="button" title="Tamaño original">100%</button>
+        <button id="mediaZoomFit" class="media-zoom-btn" type="button" title="Ajustar a ventana">Ajustar</button>
+      </div>
       <button id="mediaViewerClose" class="media-viewer-close" type="button">×</button>
     </div>
     <div id="mediaViewerBody" class="media-viewer-body"></div>
