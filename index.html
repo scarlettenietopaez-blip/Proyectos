@@ -7,6 +7,7 @@
   <title>Seguimiento de Proyectos | GADM Riobamba</title>
   <link rel="icon" type="image/png" href="./assets/favicon.png">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./supabase-config.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.7/build/pannellum.css">
@@ -1129,6 +1130,99 @@
       display:none !important;
     }
 
+  
+    /* =========================================================
+       V21 - FILTRO GLOBAL, CAPAS Y EXPORTACIÓN
+       ========================================================= */
+    .dashboard-toolbar{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:18px;
+      margin-bottom:18px;
+      padding:14px 16px;
+      border:1px solid var(--line);
+      border-radius:11px;
+      background:#fff;
+      box-shadow:var(--shadow);
+    }
+    .dashboard-toolbar label{
+      display:grid;
+      gap:6px;
+      min-width:300px;
+      color:#0d2a5b;
+      font-size:10px;
+      font-weight:800;
+    }
+    .dashboard-toolbar select{
+      height:38px;
+      border:1px solid #cfd8e6;
+      border-radius:6px;
+      background:#fff;
+      padding:0 11px;
+      color:#344054;
+      font:inherit;
+    }
+    .dashboard-filter-summary{
+      color:#667085;
+      font-size:10px;
+      text-align:right;
+    }
+
+    .charts-top.charts-three{
+      grid-template-columns:1fr 1.15fr 1.35fr;
+    }
+    .charts-top.charts-three .chart-top-card{
+      height:350px;
+    }
+    .charts-top.charts-three .chart-wrap{
+      height:285px;
+    }
+    .charts-top.charts-three .chart-note{
+      font-size:9px;
+      margin:-6px 0 6px;
+    }
+
+    .map-layer-control{
+      position:absolute;
+      z-index:11;
+      left:12px;
+      top:12px;
+      min-width:150px;
+      padding:9px 10px;
+      background:rgba(255,255,255,.94);
+      border:1px solid #d5deea;
+      border-radius:8px;
+      box-shadow:0 5px 16px rgba(13,42,91,.14);
+      font-size:9px;
+      color:#203858;
+    }
+    .map-layer-control strong{
+      display:block;
+      margin-bottom:6px;
+      color:#0d2a5b;
+      font-size:9px;
+    }
+    .map-layer-control label{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      margin:5px 0;
+      cursor:pointer;
+      font-weight:700;
+    }
+    .map-layer-control input{accent-color:#0d2a5b}
+
+    @media(max-width:1180px){
+      .charts-top.charts-three{grid-template-columns:1fr}
+      .charts-top.charts-three .chart-card{grid-column:auto !important}
+    }
+    @media(max-width:760px){
+      .dashboard-toolbar{flex-direction:column;align-items:stretch}
+      .dashboard-toolbar label{min-width:0}
+      .dashboard-filter-summary{text-align:left}
+    }
+
   </style>
 </head>
 <body>
@@ -1167,6 +1261,16 @@
   </header>
 
   <main class="main-content">
+    <section class="dashboard-toolbar">
+      <label>
+        <span>FILTRAR DASHBOARD POR PARROQUIA</span>
+        <select id="dashboardParishFilter">
+          <option value="">Todas las parroquias</option>
+        </select>
+      </label>
+      <div id="dashboardFilterSummary" class="dashboard-filter-summary">Mostrando información de todas las parroquias</div>
+    </section>
+
     <section class="kpi-grid">
       <article class="kpi-card kpi-total">
         <span class="kpi-label">TOTAL DE PROYECTOS</span><strong id="kpiTotal">—</strong>
@@ -1186,11 +1290,7 @@
       </article>
     </section>
 
-    <section class="charts-top">
-      <article class="chart-card chart-top-card">
-        <h2>DISTRIBUCIÓN POR CATEGORÍA</h2>
-        <div class="chart-wrap"><canvas id="categoryChart"></canvas></div>
-      </article>
+    <section class="charts-top charts-three">
       <article class="chart-card chart-top-card">
         <h2>ESTADO GENERAL DE LOS PROYECTOS</h2>
         <div class="chart-wrap"><canvas id="statusChart"></canvas></div>
@@ -1199,24 +1299,28 @@
         <h2>PROYECTOS POR PARROQUIA</h2>
         <div class="chart-wrap"><canvas id="parishChart"></canvas></div>
       </article>
-    </section>
-
-    <section class="chart-card chart-full">
-      <h2>MONTO DE INVERSIÓN POR PARROQUIA</h2>
-      <p class="chart-note">Haz clic sobre una barra para ver los proyectos que conforman esa parroquia y sus montos individuales.</p>
-      <div class="chart-wrap"><canvas id="parishMoneyChart"></canvas></div>
+      <article class="chart-card chart-top-card">
+        <h2>MONTO DE INVERSIÓN POR PARROQUIA</h2>
+        <p class="chart-note">Haz clic en una barra para ver el detalle.</p>
+        <div class="chart-wrap"><canvas id="parishMoneyChart"></canvas></div>
+      </article>
     </section>
 
     <section class="map-card">
       <div class="map-card-head">
         <div>
           <h2>LOCALIZACIÓN DE PROYECTOS POR PARROQUIA</h2>
-          <p>Mapa interactivo con cartografía base, parroquias al 50% de opacidad y proyectos georreferenciados con nombre visible.</p>
+          <p>Mapa interactivo con proyectos georreferenciados y capas independientes de Parroquias y Plataformas.</p>
         </div>
         <div id="mapProjectCount" class="map-count">Cargando mapa…</div>
       </div>
       <div class="map-shell">
         <div id="projectsMap" aria-label="Mapa interactivo de proyectos"></div>
+        <div class="map-layer-control" aria-label="Control de capas">
+          <strong>CAPAS</strong>
+          <label><input id="toggleParishesLayer" type="checkbox" checked> Parroquias</label>
+          <label><input id="togglePlatformsLayer" type="checkbox" checked> Plataformas</label>
+        </div>
         <aside id="mapMediaPanel" class="map-media-panel" aria-hidden="true">
           <div class="map-media-panel-head">
             <div style="flex:1;min-width:0">
@@ -1243,6 +1347,7 @@
         <p>Consulta pública del registro oficial de proyectos. Agregar, editar y eliminar requiere credenciales autorizadas.</p>
       </div>
       <div class="matrix-actions">
+        <button id="downloadMatrixXlsx" class="matrix-btn" type="button">⇩ Descargar Matriz (.xlsx)</button>
         <span id="dbConnectionBadge" class="connection-badge">Base no configurada</span>
         <button id="matrixLogoutBtn" class="matrix-btn" type="button" hidden>Cerrar sesión</button>
         <button id="addProjectBtn" class="matrix-btn primary" type="button" hidden>+ Agregar proyecto</button>
@@ -1292,6 +1397,15 @@
         </label>
         <label>Buscar
           <input id="matrixSearch" type="search" placeholder="Buscar proyecto o parroquia…">
+        </label>
+        <label>Ordenar
+          <select id="matrixSort">
+            <option value="item-asc">N° de proyecto</option>
+            <option value="budget-desc">Presupuesto: mayor a menor</option>
+            <option value="budget-asc">Presupuesto: menor a mayor</option>
+            <option value="progress-desc">Avance: mayor a menor</option>
+            <option value="progress-asc">Avance: menor a mayor</option>
+          </select>
         </label>
         <button id="matrixClearBtn" class="matrix-btn matrix-clear" type="button">↻ Limpiar filtros</button>
       </div>
@@ -1364,7 +1478,11 @@ let viewerCarouselIndex=0;
 let mediaImageZoom=1;
 let mediaImageFit=false;
 
-let categoryChart,statusChart,parishChart,parishMoneyChart;
+let statusChart,parishChart,parishMoneyChart;
+let currentParishGeo=null;
+let currentPlatformsGeo=null;
+let parishLabelMarkers=[];
+let currentDashboardParish="";
 
 const els={
  total:$("#kpiTotal"),pac:$("#kpiPac"),otros:$("#kpiOtros"),oopp:$("#kpiOopp"),
@@ -1399,6 +1517,30 @@ function amount(p){
  const n=Number(raw);
  return Number.isFinite(n)?n:0;
 }
+function progressPercent(value){
+ if(value===null || value===undefined || value==="") return null;
+ const n=Number(value);
+ if(!Number.isFinite(n)) return null;
+ return n<=1 ? n*100 : n;
+}
+function progressDbValue(value){
+ if(value===null || value===undefined || value==="") return null;
+ const n=Number(value);
+ if(!Number.isFinite(n)) return null;
+ return n>1 ? n/100 : n;
+}
+function formatProgress(value){
+ const p=progressPercent(value);
+ return p===null ? "—" : `${Number.isInteger(p)?p:p.toFixed(1)}%`;
+}
+function normalizedParishName(value){
+ return String(value||"").trim().toUpperCase().replace(/\s+/g," ");
+}
+function dashboardProjects(){
+ const parish=document.getElementById("dashboardParishFilter")?.value||"";
+ return parish ? projects.filter(p=>normalizedParishName(p.parroquia)===normalizedParishName(parish)) : projects;
+}
+
 function moneyValue(n){return new Intl.NumberFormat("es-EC",{style:"currency",currency:"USD",minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);}
 function moneyCell(p){
  if(amount(p)>0){
@@ -1415,14 +1557,33 @@ function unique(field){return [...new Set(projects.map(p=>p[field]).filter(Boole
 function fillSelect(el,vals){vals.forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v;el.appendChild(o);});}
 
 function renderKpis(){
- const total=projects.length,pac=projects.filter(p=>p.categoria==="PAC"),fuera=projects.filter(p=>p.categoria==="Fuera del PAC"),
-       entregados=projects.filter(p=>groupedStatus(p)==="Entregado para Contratación");
- els.total.textContent=total;els.pac.textContent=pac.length;els.otros.textContent=fuera.length;els.oopp.textContent=entregados.length;
- els.moneyTotal.textContent=moneyValue(projects.reduce((s,p)=>s+amount(p),0));
+ const data=dashboardProjects();
+ const total=data.length,
+       pac=data.filter(p=>p.categoria==="PAC"),
+       fuera=data.filter(p=>p.categoria==="Fuera del PAC"),
+       entregados=data.filter(p=>groupedStatus(p)==="Entregado para Contratación");
+
+ els.total.textContent=total;
+ els.pac.textContent=pac.length;
+ els.otros.textContent=fuera.length;
+ els.oopp.textContent=entregados.length;
+
+ els.moneyTotal.textContent=moneyValue(data.reduce((s,p)=>s+amount(p),0));
  els.moneyPac.textContent=moneyValue(pac.reduce((s,p)=>s+amount(p),0));
  els.moneyOtros.textContent=moneyValue(fuera.reduce((s,p)=>s+amount(p),0));
  els.moneyOopp.textContent=moneyValue(entregados.reduce((s,p)=>s+amount(p),0));
- els.pctPac.textContent=pct(pac.length,total);els.pctOtros.textContent=pct(fuera.length,total);els.pctOopp.textContent=pct(entregados.length,total);
+
+ els.pctPac.textContent=pct(pac.length,total);
+ els.pctOtros.textContent=pct(fuera.length,total);
+ els.pctOopp.textContent=pct(entregados.length,total);
+
+ const summary=document.getElementById("dashboardFilterSummary");
+ if(summary){
+   const parish=document.getElementById("dashboardParishFilter")?.value||"";
+   summary.textContent=parish
+     ? `Mostrando ${total} proyecto${total===1?"":"s"} de ${parish}`
+     : `Mostrando ${total} proyectos de todas las parroquias`;
+ }
 }
 
 const valueLabelsPlugin={
@@ -1449,48 +1610,105 @@ const valueLabelsPlugin={
 Chart.register(valueLabelsPlugin);
 
 function renderCharts(){
- Chart.defaults.font.family='Arial, "Helvetica Neue", sans-serif';Chart.defaults.color="#344054";Chart.defaults.font.size=10;
+ Chart.defaults.font.family='Arial, "Helvetica Neue", sans-serif';
+ Chart.defaults.color="#344054";
+ Chart.defaults.font.size=10;
 
- const pac=projects.filter(p=>p.categoria==="PAC").length,fuera=projects.filter(p=>p.categoria==="Fuera del PAC").length;
- categoryChart?.destroy();
- categoryChart=new Chart($("#categoryChart"),{
-  type:"doughnut",
-  data:{labels:["PAC","Fuera del PAC"],datasets:[{data:[pac,fuera],backgroundColor:[COLORS.blue,COLORS.red],borderColor:"#fff",borderWidth:2}]},
-  options:{responsive:true,maintainAspectRatio:false,cutout:"52%",plugins:{legend:{position:"bottom",labels:{boxWidth:10,padding:12}},tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw} (${(c.raw/projects.length*100).toFixed(1)}%)`}}}}
- });
+ const data=dashboardProjects();
 
  const order=["En desarrollo","Entregado para Contratación","Remitido a otra dirección","No iniciado"];
- const sc=Object.fromEntries(order.map(s=>[s,0]));projects.forEach(p=>{const s=groupedStatus(p);if(sc[s]!==undefined)sc[s]++;});
+ const sc=Object.fromEntries(order.map(s=>[s,0]));
+ data.forEach(p=>{
+   const s=groupedStatus(p);
+   if(sc[s]!==undefined) sc[s]++;
+ });
+
  statusChart?.destroy();
  statusChart=new Chart($("#statusChart"),{
   type:"bar",
-  data:{labels:order,datasets:[{data:order.map(k=>sc[k]),backgroundColor:[COLORS.navy,COLORS.green,COLORS.blue,COLORS.red],borderRadius:2,barThickness:18}]},
-  options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,layout:{padding:{right:30}},plugins:{legend:{display:false},valueLabels:{enabled:true}},
-   scales:{x:{beginAtZero:true,grid:{color:"#edf1f6"},ticks:{stepSize:5}},y:{grid:{display:false}}}}
+  data:{
+    labels:order,
+    datasets:[{
+      data:order.map(k=>sc[k]),
+      backgroundColor:[COLORS.yellow,COLORS.green,COLORS.orange,COLORS.red],
+      borderRadius:3,
+      barThickness:18
+    }]
+  },
+  options:{
+    indexAxis:"y",
+    responsive:true,
+    maintainAspectRatio:false,
+    layout:{padding:{right:30}},
+    plugins:{legend:{display:false},valueLabels:{enabled:true}},
+    scales:{
+      x:{beginAtZero:true,grid:{color:"#edf1f6"},ticks:{stepSize:1,precision:0}},
+      y:{grid:{display:false}}
+    }
+  }
  });
 
- const pc={};projects.forEach(p=>{const k=p.parroquia||"Sin información";pc[k]=(pc[k]||0)+1;});
+ const pc={};
+ data.forEach(p=>{
+   const k=p.parroquia||"Sin información";
+   pc[k]=(pc[k]||0)+1;
+ });
  const pe=Object.entries(pc).sort((a,b)=>b[1]-a[1]);
+
  parishChart?.destroy();
  parishChart=new Chart($("#parishChart"),{
   type:"bar",
-  data:{labels:pe.map(x=>x[0]),datasets:[{label:"Proyectos",data:pe.map(x=>x[1]),backgroundColor:pe.map((_,i)=>PALETTE[i%PALETTE.length]),borderRadius:2,barPercentage:.7}]},
-  options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:18}},plugins:{
-    legend:{display:false},
-    valueLabels:{enabled:true,formatter:v=>String(v)},
-    tooltip:{callbacks:{label:c=>`${c.raw} proyecto${c.raw===1?"":"s"}`}}
-   },scales:{y:{beginAtZero:true,grid:{color:"#edf1f6"},ticks:{stepSize:1,precision:0}},x:{grid:{display:false},ticks:{maxRotation:35,minRotation:0,autoSkip:false}}}}
+  data:{
+    labels:pe.map(x=>x[0]),
+    datasets:[{
+      label:"Proyectos",
+      data:pe.map(x=>x[1]),
+      backgroundColor:pe.map((_,i)=>PALETTE[i%PALETTE.length]),
+      borderRadius:2,
+      barPercentage:.7
+    }]
+  },
+  options:{
+    responsive:true,
+    maintainAspectRatio:false,
+    layout:{padding:{top:18}},
+    plugins:{
+      legend:{display:false},
+      valueLabels:{enabled:true,formatter:v=>String(v)},
+      tooltip:{callbacks:{label:c=>`${c.raw} proyecto${c.raw===1?"":"s"}`}}
+    },
+    scales:{
+      y:{beginAtZero:true,grid:{color:"#edf1f6"},ticks:{stepSize:1,precision:0}},
+      x:{grid:{display:false},ticks:{maxRotation:35,minRotation:0,autoSkip:false}}
+    }
+  }
  });
 
- const pm={};projects.forEach(p=>{const k=p.parroquia||"Sin información";pm[k]=(pm[k]||0)+amount(p);});
+ const pm={};
+ data.forEach(p=>{
+   const k=p.parroquia||"Sin información";
+   pm[k]=(pm[k]||0)+amount(p);
+ });
  const pme=Object.entries(pm).sort((a,b)=>b[1]-a[1]);
+
  parishMoneyChart?.destroy();
  parishMoneyChart=new Chart($("#parishMoneyChart"),{
   type:"bar",
-  data:{labels:pme.map(x=>x[0]),datasets:[{label:"Inversión",data:pme.map(x=>x[1]),backgroundColor:pme.map((_,i)=>PALETTE[i%PALETTE.length]),borderRadius:3,barPercentage:.62}]},
+  data:{
+    labels:pme.map(x=>x[0]),
+    datasets:[{
+      label:"Inversión",
+      data:pme.map(x=>x[1]),
+      backgroundColor:pme.map((_,i)=>PALETTE[i%PALETTE.length]),
+      borderRadius:3,
+      barPercentage:.64
+    }]
+  },
   options:{
-   responsive:true,maintainAspectRatio:false,
-   layout:{padding:{top:28,left:8,right:8,bottom:0}},
+   indexAxis:"y",
+   responsive:true,
+   maintainAspectRatio:false,
+   layout:{padding:{top:8,left:0,right:72,bottom:0}},
    onHover:(evt,elements)=>{evt.native.target.style.cursor=elements.length?"pointer":"default";},
    onClick:(evt,elements)=>{
      if(!elements.length)return;
@@ -1503,15 +1721,19 @@ function renderCharts(){
     tooltip:{callbacks:{label:c=>moneyValue(c.raw)}}
    },
    scales:{
-    y:{beginAtZero:true,grid:{color:"#edf1f6"},ticks:{callback:v=>new Intl.NumberFormat("es-EC",{notation:"compact",maximumFractionDigits:1}).format(v)}},
-    x:{grid:{display:false},ticks:{maxRotation:0,minRotation:0,autoSkip:false}}
+    x:{
+      beginAtZero:true,
+      grid:{color:"#edf1f6"},
+      ticks:{callback:v=>new Intl.NumberFormat("es-EC",{notation:"compact",maximumFractionDigits:1}).format(v)}
+    },
+    y:{grid:{display:false},ticks:{autoSkip:false}}
    }
   }
  });
 }
 
 function openParishInvestmentModal(parish){
- const list=projects.filter(p=>(p.parroquia||"Sin información")===parish).sort((a,b)=>amount(b)-amount(a));
+ const list=dashboardProjects().filter(p=>(p.parroquia||"Sin información")===parish).sort((a,b)=>amount(b)-amount(a));
  const total=list.reduce((s,p)=>s+amount(p),0);
  els.parishModalContent.innerHTML=`
    <p class="modal-kicker">Detalle de inversión por parroquia</p>
@@ -1625,6 +1847,119 @@ function parishColorExpression(){
  ];
 }
 
+
+function buildProjectGeoJSON(data=projects){
+ const pointFeatures=[];
+ data.forEach((p,i)=>{
+   const locs=projectLocations(p);
+   locs.forEach((loc,locIndex)=>{
+     pointFeatures.push({
+       type:"Feature",
+       geometry:{type:"Point",coordinates:[loc.lng,loc.lat]},
+       properties:{
+         project_id:String(p.id??""),
+         item:String(p.item??i+1),
+         proyecto:p.proyecto||"",
+         ubicacion:locs.length>1?loc.label:"",
+         parroquia:p.parroquia||"",
+         categoria:displayCategory(p.categoria),
+         estado:groupedStatus(p),
+         monto:amount(p)>0?moneyValue(amount(p)):(p.monto||"—"),
+         avance:formatProgress(p.Avance),
+         area_intervencion:p["Área de Intervención"]||"—"
+       }
+     });
+   });
+ });
+ return {type:"FeatureCollection",features:pointFeatures};
+}
+
+function addCoordsToBounds(bounds,coords){
+ if(Array.isArray(coords) && typeof coords[0]==="number"){
+   bounds.extend(coords);
+ }else if(Array.isArray(coords)){
+   coords.forEach(c=>addCoordsToBounds(bounds,c));
+ }
+}
+
+function parishFeatureName(feature){
+ const props=feature?.properties||{};
+ return normalizedParishName(props.nombre_mapa||props.nombre||props.nombre_1||"");
+}
+
+function applyMapLayerVisibility(){
+ if(!projectMapInstance || !projectMapReady) return;
+ const parishVisible=document.getElementById("toggleParishesLayer")?.checked!==false;
+ const platformsVisible=document.getElementById("togglePlatformsLayer")?.checked!==false;
+
+ ["parroquias-fill","parroquias-line"].forEach(id=>{
+   if(projectMapInstance.getLayer(id)){
+     projectMapInstance.setLayoutProperty(id,"visibility",parishVisible?"visible":"none");
+   }
+ });
+ ["plataformas-fill","plataformas-line"].forEach(id=>{
+   if(projectMapInstance.getLayer(id)){
+     projectMapInstance.setLayoutProperty(id,"visibility",platformsVisible?"visible":"none");
+   }
+ });
+
+ parishLabelMarkers.forEach(({marker,name})=>{
+   const matches=!currentDashboardParish || normalizedParishName(name)===normalizedParishName(currentDashboardParish);
+   marker.getElement().style.display=(parishVisible&&matches)?"":"none";
+ });
+}
+
+function updateMapForDashboardFilter(){
+ if(!projectMapInstance || !projectMapReady || !currentParishGeo) return;
+
+ const parish=document.getElementById("dashboardParishFilter")?.value||"";
+ currentDashboardParish=parish;
+
+ const parishFilter=parish
+   ? ["==",["get","dashboard_parish"],normalizedParishName(parish)]
+   : null;
+ const projectFilter=parish
+   ? ["==",["get","parroquia_norm"],normalizedParishName(parish)]
+   : null;
+
+ ["parroquias-fill","parroquias-line"].forEach(id=>{
+   if(projectMapInstance.getLayer(id)) projectMapInstance.setFilter(id,parishFilter);
+ });
+ ["proyectos-circle","proyectos-label"].forEach(id=>{
+   if(projectMapInstance.getLayer(id)) projectMapInstance.setFilter(id,projectFilter);
+ });
+
+ applyMapLayerVisibility();
+
+ const data=dashboardProjects();
+ const pointGeo=buildProjectGeoJSON(data);
+ const mapCount=document.getElementById("mapProjectCount");
+ if(mapCount){
+   mapCount.textContent=`${pointGeo.features.length} ubicación${pointGeo.features.length===1?"":"es"} georreferenciada${pointGeo.features.length===1?"":"s"}`;
+ }
+
+ const bounds=new maplibregl.LngLatBounds();
+ if(parish){
+   currentParishGeo.features
+     .filter(f=>parishFeatureName(f)===normalizedParishName(parish))
+     .forEach(f=>addCoordsToBounds(bounds,f.geometry.coordinates));
+ }else{
+   currentParishGeo.features.forEach(f=>addCoordsToBounds(bounds,f.geometry.coordinates));
+ }
+ pointGeo.features.forEach(f=>bounds.extend(f.geometry.coordinates));
+
+ if(!bounds.isEmpty()){
+   projectMapInstance.fitBounds(bounds,{padding:parish?70:38,duration:650,maxZoom:parish?13:11});
+ }
+ closeMapMediaPanel();
+}
+
+function applyDashboardParishFilter(){
+ renderKpis();
+ renderCharts();
+ updateMapForDashboardFilter();
+}
+
 async function renderProjectMap(){
  const mapCount=document.getElementById("mapProjectCount");
  const mapContainer=document.getElementById("projectsMap");
@@ -1638,38 +1973,29 @@ async function renderProjectMap(){
  }
 
  try{
-   const [parishRes]=await Promise.all([
-     fetch("./data/parroquias.geojson",{cache:"no-store"})
+   const [parishRes,platformRes]=await Promise.all([
+     fetch("./data/parroquias.geojson",{cache:"no-store"}),
+     fetch("./data/plataformas.geojson",{cache:"no-store"})
    ]);
    if(!parishRes.ok) throw new Error("No se pudo cargar parroquias.geojson");
-   const parishGeo=await parishRes.json();
+   if(!platformRes.ok) throw new Error("No se pudo cargar plataformas.geojson");
 
-   const pointFeatures=[];
-   projects.forEach((p,i)=>{
-     const locs=projectLocations(p);
-     locs.forEach((loc,locIndex)=>{
-       pointFeatures.push({
-         type:"Feature",
-         geometry:{type:"Point",coordinates:[loc.lng,loc.lat]},
-         properties:{
-           project_id:String(p.id??""),
-           item:String(p.item??i+1),
-           proyecto:p.proyecto||"",
-           ubicacion:locs.length>1?loc.label:"",
-           parroquia:p.parroquia||"",
-           categoria:displayCategory(p.categoria),
-           estado:groupedStatus(p),
-           monto:amount(p)>0?moneyValue(amount(p)):(p.monto||"—"),
-           avance:(p.Avance!==""&&p.Avance!=null)
-             ? `${Number(p.Avance)<=1?Math.round(Number(p.Avance)*100):p.Avance}%`
-             : "—",
-           area_intervencion:p["Área de Intervención"]||"—"
-         }
-       });
-     });
+   const parishGeo=await parishRes.json();
+   const platformGeo=await platformRes.json();
+
+   parishGeo.features.forEach(f=>{
+     f.properties=f.properties||{};
+     f.properties.dashboard_parish=parishFeatureName(f);
    });
 
-   const projectGeo={type:"FeatureCollection",features:pointFeatures};
+   currentParishGeo=parishGeo;
+   currentPlatformsGeo=platformGeo;
+
+   const projectGeo=buildProjectGeoJSON(projects);
+   projectGeo.features.forEach(f=>{
+     f.properties.parroquia_norm=normalizedParishName(f.properties.parroquia);
+   });
+   const pointFeatures=projectGeo.features;
 
    projectMapInstance=new maplibregl.Map({
      container:"projectsMap",
@@ -1723,6 +2049,28 @@ async function renderProjectMap(){
          "line-opacity":0.95
        }
      });
+
+     map.addSource("plataformas",{type:"geojson",data:platformGeo});
+     map.addLayer({
+       id:"plataformas-fill",
+       type:"fill",
+       source:"plataformas",
+       paint:{
+         "fill-color":"#7c3aed",
+         "fill-opacity":0.35
+       }
+     });
+     map.addLayer({
+       id:"plataformas-line",
+       type:"line",
+       source:"plataformas",
+       paint:{
+         "line-color":"#5b21b6",
+         "line-width":2,
+         "line-opacity":0.95
+       }
+     });
+
 
 
 
@@ -1789,12 +2137,14 @@ async function renderProjectMap(){
        el.dataset.parishName=normalizedName;
        el.textContent=group.name;
 
-       new maplibregl.Marker({
+       const marker=new maplibregl.Marker({
          element:el,
          anchor:"center"
        })
        .setLngLat(group.bounds.getCenter())
        .addTo(map);
+
+       parishLabelMarkers.push({marker,name:group.name});
      });
 
      map.addSource("proyectos",{type:"geojson",data:projectGeo});
@@ -1841,27 +2191,23 @@ async function renderProjectMap(){
        }
      });
 
-     const bounds=new maplibregl.LngLatBounds();
-     parishGeo.features.forEach(f=>{
-       const walk=c=>{
-         if(Array.isArray(c) && typeof c[0]==="number"){
-           bounds.extend(c);
-         }else if(Array.isArray(c)){
-           c.forEach(walk);
-         }
-       };
-       walk(f.geometry.coordinates);
-     });
-     pointFeatures.forEach(f=>bounds.extend(f.geometry.coordinates));
-
-     if(!bounds.isEmpty()){
-       map.fitBounds(bounds,{padding:38,duration:0});
-     }
-
-     if(mapCount){
-       mapCount.textContent=`${pointFeatures.length} ubicación${pointFeatures.length===1?"":"es"} georreferenciada${pointFeatures.length===1?"":"s"}`;
-     }
+     applyMapLayerVisibility();
+     updateMapForDashboardFilter();
    });
+
+   map.on("click","plataformas-fill",e=>{
+     const f=e.features?.[0];
+     if(!f) return;
+     const props=f.properties||{};
+     const name=props.Nombre||props.nombre||"Plataforma";
+     const area=Number(props.Area);
+     new maplibregl.Popup({closeButton:true,offset:8})
+       .setLngLat(e.lngLat)
+       .setHTML(`<strong>${esc(name)}</strong>${Number.isFinite(area)?`<br><span><b>Área:</b> ${area.toFixed(2)} m²</span>`:""}`)
+       .addTo(projectMapInstance);
+   });
+   map.on("mouseenter","plataformas-fill",()=>map.getCanvas().style.cursor="pointer");
+   map.on("mouseleave","plataformas-fill",()=>map.getCanvas().style.cursor="");
 
    map.on("click","proyectos-circle",async e=>{
      const f=e.features?.[0];
@@ -1939,7 +2285,7 @@ function openModal(item){
  ${detail("Estado",groupedStatus(p))}
  ${detail("Fecha prevista / entrega",p.fecha_entrega)}
  ${detail("Cronograma contractual",p.cronograma_contractual)}
- ${detail("Avance",p.Avance!==""&&p.Avance!=null?`${p.Avance}%`:"Sin información registrada")}
+ ${detail("Avance",p.Avance!==""&&p.Avance!=null?formatProgress(p.Avance):"Sin información registrada")}
  ${detail("Área de Intervención",p["Área de Intervención"])}
  ${detail("Coordenada X",p["Coordenadas X"])}
  ${detail("Coordenada Y",p["Coordenadas Y"])}
@@ -2083,7 +2429,7 @@ function projectToDbPayload(){
    estado_dashboard:document.getElementById("fEstadoDashboard").value,
    fecha_entrega:document.getElementById("fFechaEntrega").value.trim(),
    cronograma_contractual:document.getElementById("fCronograma").value.trim(),
-   avance:avanceRaw===""?null:Number(avanceRaw),
+   avance:avanceRaw===""?null:progressDbValue(avanceRaw),
    coordenadas_x:document.getElementById("fCoordX").value.trim(),
    coordenadas_y:document.getElementById("fCoordY").value.trim(),
    area_intervencion:document.getElementById("fAreaIntervencion").value.trim()
@@ -2103,7 +2449,7 @@ function setFormFromRow(r){
  document.getElementById("fEstadoDashboard").value=r?.estado_dashboard||"En desarrollo";
  document.getElementById("fFechaEntrega").value=r?.fecha_entrega||"";
  document.getElementById("fCronograma").value=r?.cronograma_contractual||"";
- document.getElementById("fAvance").value=r?.avance??"";
+ document.getElementById("fAvance").value=r?.avance==null?"":progressPercent(r.avance);
  document.getElementById("fCoordX").value=r?.coordenadas_x||"";
  document.getElementById("fCoordY").value=r?.coordenadas_y||"";
  document.getElementById("fAreaIntervencion").value=r?.area_intervencion||"";
@@ -2243,34 +2589,27 @@ async function deleteProject(id,projectName){
 
 async function afterDatabaseChange(){
  await refreshProjectsFromDatabase();
+
+ const dashboardSelect=document.getElementById("dashboardParishFilter");
+ if(dashboardSelect){
+   const current=dashboardSelect.value;
+   const vals=unique("parroquia");
+   dashboardSelect.innerHTML='<option value="">Todas las parroquias</option>';
+   fillSelect(dashboardSelect,vals);
+   if(vals.includes(current)) dashboardSelect.value=current;
+ }
+
  renderKpis();
  renderCharts();
  renderMatrix();
 
  if(projectMapInstance && projectMapReady && projectMapInstance.getSource("proyectos")){
-   const pointFeatures=[];
-   projects.forEach((p,i)=>{
-     const locs=projectLocations(p);
-     locs.forEach(loc=>{
-       pointFeatures.push({
-         type:"Feature",
-         geometry:{type:"Point",coordinates:[loc.lng,loc.lat]},
-         properties:{
-           project_id:String(p.id??""),
-           item:String(p.item??i+1),
-           proyecto:p.proyecto||"",
-           ubicacion:locs.length>1?loc.label:"",
-           parroquia:p.parroquia||"",
-           categoria:displayCategory(p.categoria),
-           estado:groupedStatus(p),
-           monto:amount(p)>0?moneyValue(amount(p)):(p.monto||"—"),
-           avance:(p.Avance!==""&&p.Avance!=null)?`${p.Avance}%`:"—",
-           area_intervencion:p["Área de Intervención"]||"—"
-         }
-       });
-     });
+   const geo=buildProjectGeoJSON(projects);
+   geo.features.forEach(f=>{
+     f.properties.parroquia_norm=normalizedParishName(f.properties.parroquia);
    });
-   projectMapInstance.getSource("proyectos").setData({type:"FeatureCollection",features:pointFeatures});
+   projectMapInstance.getSource("proyectos").setData(geo);
+   setTimeout(updateMapForDashboardFilter,50);
  }
 }
 
@@ -2680,8 +3019,9 @@ function matrixFilteredRows(){
  const cat=document.getElementById("matrixCategoryFilter")?.value||"";
  const parish=document.getElementById("matrixParishFilter")?.value||"";
  const status=document.getElementById("matrixStatusFilter")?.value||"";
+ const sort=document.getElementById("matrixSort")?.value||"item-asc";
 
- return matrixRows.filter(r=>{
+ const rows=matrixRows.filter(r=>{
    const hay=[r.proyecto,r.parroquia,r.estado_original,r.responsables,r.tramite]
      .join(" ").toLowerCase();
    return (!q||hay.includes(q))
@@ -2689,6 +3029,64 @@ function matrixFilteredRows(){
      && (!parish||r.parroquia===parish)
      && (!status||r.estado_dashboard===status);
  });
+
+ rows.sort((a,b)=>{
+   if(sort==="budget-desc") return (Number(b.monto)||0)-(Number(a.monto)||0);
+   if(sort==="budget-asc") return (Number(a.monto)||0)-(Number(b.monto)||0);
+   if(sort==="progress-desc") return (progressPercent(b.avance)??-1)-(progressPercent(a.avance)??-1);
+   if(sort==="progress-asc"){
+     const av=progressPercent(a.avance), bv=progressPercent(b.avance);
+     if(av===null && bv===null) return 0;
+     if(av===null) return 1;
+     if(bv===null) return -1;
+     return av-bv;
+   }
+   return (Number(a.item)||0)-(Number(b.item)||0);
+ });
+
+ return rows;
+}
+
+
+function downloadMatrixXlsx(){
+ if(typeof XLSX==="undefined"){
+   alert("No se pudo cargar el componente de exportación XLSX.");
+   return;
+ }
+
+ const rows=matrixRows
+   .slice()
+   .sort((a,b)=>(Number(a.item)||0)-(Number(b.item)||0))
+   .map(r=>({
+     "N°":r.item??"",
+     "Categoría":r.categoria||"",
+     "Parroquia":r.parroquia||"",
+     "Proyecto":r.proyecto||"",
+     "Monto (USD)":r.monto==null?"":Number(r.monto),
+     "Trámite":r.tramite||"",
+     "Responsables":r.responsables||"",
+     "Descripción / Estado original":r.estado_original||"",
+     "Estado Dashboard":r.estado_dashboard||"",
+     "Fecha prevista / entrega":r.fecha_entrega||"",
+     "Cronograma contractual":r.cronograma_contractual||"",
+     "Avance (%)":progressPercent(r.avance)??"",
+     "Coordenadas X":r.coordenadas_x||"",
+     "Coordenadas Y":r.coordenadas_y||"",
+     "Área de Intervención":r.area_intervencion||""
+   }));
+
+ const ws=XLSX.utils.json_to_sheet(rows);
+ ws["!cols"]=[
+   {wch:7},{wch:16},{wch:16},{wch:52},{wch:16},{wch:20},{wch:28},
+   {wch:50},{wch:28},{wch:24},{wch:32},{wch:12},{wch:24},{wch:24},{wch:24}
+ ];
+
+ const wb=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb,ws,"Matriz de Proyectos");
+
+ const date=new Date();
+ const stamp=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+ XLSX.writeFile(wb,`Matriz_Proyectos_GADMR_${stamp}.xlsx`);
 }
 
 function fillMatrixParishes(){
@@ -2723,6 +3121,13 @@ async function focusProjectOnMap(projectId){
  const row=matrixRows.find(r=>String(r.id)===String(projectId));
  if(!row) return;
  const p=dbRowToProject(row);
+
+ const dashboardSelect=document.getElementById("dashboardParishFilter");
+ if(dashboardSelect && p.parroquia){
+   dashboardSelect.value=p.parroquia;
+   applyDashboardParishFilter();
+ }
+
  const loc=projectLocations(p)[0];
  if(!loc){
    alert("Este proyecto no tiene coordenadas registradas.");
@@ -2798,7 +3203,7 @@ function renderMatrix(){
      <td class="matrix-description">${esc(r.estado_original||"Sin descripción registrada")}</td>
      <td><span class="matrix-status-pill" data-status="${esc(r.estado_dashboard||"")}">${esc(r.estado_dashboard||"—")}</span></td>
      <td>${esc(r.fecha_entrega||"—")}</td>
-     <td>${r.avance==null?"—":`${esc(r.avance)}%`}</td>
+     <td>${r.avance==null?"—":esc(formatProgress(r.avance))}</td>
      <td>${esc(r.area_intervencion||"—")}</td>
      <td class="matrix-actions-cell">
        <button class="row-action detail" type="button" data-detail-item="${r.item}">◉ Ver detalle</button>
@@ -2914,6 +3319,11 @@ function bindAdminUI(){
    }
  });
 
+ document.getElementById("dashboardParishFilter")?.addEventListener("change",applyDashboardParishFilter);
+ document.getElementById("toggleParishesLayer")?.addEventListener("change",applyMapLayerVisibility);
+ document.getElementById("togglePlatformsLayer")?.addEventListener("change",applyMapLayerVisibility);
+ document.getElementById("downloadMatrixXlsx")?.addEventListener("click",downloadMatrixXlsx);
+
  document.getElementById("matrixLoginBtn")?.addEventListener("click",matrixLogin);
  document.getElementById("matrixLoginCancelBtn")?.addEventListener("click",()=>{pendingProtectedAction=null;hideAuthPrompt();});
  document.getElementById("matrixPassword")?.addEventListener("keydown",e=>{
@@ -2929,11 +3339,13 @@ function bindAdminUI(){
  document.getElementById("matrixCategoryFilter")?.addEventListener("change",()=>{matrixCurrentPage=1;renderMatrix();});
  document.getElementById("matrixParishFilter")?.addEventListener("change",()=>{matrixCurrentPage=1;renderMatrix();});
  document.getElementById("matrixStatusFilter")?.addEventListener("change",()=>{matrixCurrentPage=1;renderMatrix();});
+ document.getElementById("matrixSort")?.addEventListener("change",()=>{matrixCurrentPage=1;renderMatrix();});
  document.getElementById("matrixClearBtn")?.addEventListener("click",()=>{
    document.getElementById("matrixSearch").value="";
    document.getElementById("matrixCategoryFilter").value="";
    document.getElementById("matrixParishFilter").value="";
    document.getElementById("matrixStatusFilter").value="";
+   document.getElementById("matrixSort").value="item-asc";
    matrixCurrentPage=1;
    renderMatrix();
  });
@@ -3011,6 +3423,11 @@ async function init(){
  }
 
  await refreshProjectsFromDatabase();
+
+ const dashboardSelect=document.getElementById("dashboardParishFilter");
+ if(dashboardSelect){
+   fillSelect(dashboardSelect,unique("parroquia"));
+ }
 
  if(els.parish){
    fillSelect(els.parish,unique("parroquia"));
