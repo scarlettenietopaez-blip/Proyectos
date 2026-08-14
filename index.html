@@ -1364,6 +1364,15 @@
       font-size:10px !important;
     }
 
+  
+    /* V24.1 - Corrección de lista residual al volver a Todas las parroquias */
+    .parish-project-list[hidden]{
+      display:none !important;
+    }
+    #parishChartWrap[hidden]{
+      display:none !important;
+    }
+
   </style>
 </head>
 <body class="sidebar-collapsed">
@@ -1763,6 +1772,9 @@ function renderParishProjectList(data,parish){
 
  if(!parish){
    wrap.hidden=true;
+   wrap.style.removeProperty("display");
+   wrap.innerHTML="";
+   wrap.scrollTop=0;
    chartWrap.hidden=false;
    title.textContent="PROYECTOS POR PARROQUIA";
    return;
@@ -1770,6 +1782,7 @@ function renderParishProjectList(data,parish){
 
  chartWrap.hidden=true;
  wrap.hidden=false;
+ wrap.style.display="grid";
  title.textContent=`PROYECTOS DE ${parish}`;
 
  const sorted=data.slice().sort((a,b)=>{
