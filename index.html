@@ -10,6 +10,7 @@
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./supabase-config.js"></script>
+  <script src="./google-maps-config.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.7/build/pannellum.css">
   <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.7/build/pannellum.js"></script>
   <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
@@ -1378,6 +1379,140 @@
       display:none !important;
     }
 
+  
+    /* =========================================================
+       V25 - GOOGLE STREET VIEW
+       ========================================================= */
+    .streetview-btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:5px;
+      min-height:28px;
+      padding:6px 9px;
+      border:1px solid #2463c7;
+      border-radius:6px;
+      background:#fff;
+      color:#1557b0;
+      font-size:9px;
+      font-weight:800;
+      cursor:pointer;
+      white-space:nowrap;
+    }
+    .streetview-btn:hover{background:#eef5ff}
+    .streetview-btn:disabled{opacity:.45;cursor:not-allowed}
+
+    .streetview-modal{
+      display:none;
+      position:fixed;
+      inset:0;
+      z-index:3100;
+    }
+    .streetview-modal.open{display:block}
+    .streetview-backdrop{
+      position:absolute;
+      inset:0;
+      background:rgba(5,18,41,.82);
+    }
+    .streetview-dialog{
+      position:relative;
+      width:min(1180px,calc(100% - 28px));
+      height:min(780px,calc(100vh - 28px));
+      margin:14px auto;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+      border-radius:12px;
+      background:#fff;
+      box-shadow:0 30px 100px rgba(0,0,0,.42);
+    }
+    .streetview-head{
+      flex:0 0 auto;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:15px;
+      padding:12px 15px;
+      border-bottom:1px solid #e1e7ef;
+    }
+    .streetview-head-copy{min-width:0}
+    .streetview-head strong{
+      display:block;
+      color:#0d2a5b;
+      font-size:13px;
+      line-height:1.3;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    .streetview-head span{
+      display:block;
+      margin-top:3px;
+      color:#667085;
+      font-size:9px;
+    }
+    .streetview-close{
+      flex:0 0 auto;
+      border:0;
+      background:transparent;
+      color:#667085;
+      font-size:28px;
+      cursor:pointer;
+    }
+    .streetview-body{
+      position:relative;
+      flex:1;
+      min-height:0;
+      background:#e9eef5;
+    }
+    #streetViewPanorama{
+      width:100%;
+      height:100%;
+      min-height:420px;
+    }
+    .streetview-status{
+      position:absolute;
+      z-index:2;
+      left:50%;
+      top:50%;
+      transform:translate(-50%,-50%);
+      max-width:520px;
+      padding:15px 18px;
+      border-radius:9px;
+      background:rgba(255,255,255,.96);
+      color:#344054;
+      font-size:11px;
+      font-weight:700;
+      text-align:center;
+      box-shadow:0 8px 28px rgba(13,42,91,.16);
+    }
+    .streetview-status.error{
+      color:#9a2020;
+      border:1px solid #f2bbb7;
+      background:#fff4f3;
+    }
+    .streetview-footer{
+      flex:0 0 auto;
+      padding:8px 14px;
+      border-top:1px solid #e1e7ef;
+      color:#667085;
+      background:#fafbfd;
+      font-size:9px;
+    }
+    .popup-streetview-wrap{
+      margin-top:9px;
+      padding-top:8px;
+      border-top:1px solid #e4e9f1;
+    }
+    @media(max-width:760px){
+      .streetview-dialog{
+        width:calc(100% - 12px);
+        height:calc(100vh - 12px);
+        margin:6px auto;
+      }
+      #streetViewPanorama{min-height:320px}
+    }
+
   </style>
 </head>
 <body class="sidebar-collapsed">
@@ -1640,6 +1775,9 @@ let currentPlatformsGeo=null;
 let parishLabelMarkers=[];
 let platformLabelMarkers=[];
 let currentDashboardParish="";
+let googleMapsLoadPromise=null;
+let streetViewPanoramaInstance=null;
+
 
 const els={
  total:$("#kpiTotal"),pac:$("#kpiPac"),otros:$("#kpiOtros"),oopp:$("#kpiOopp"),
@@ -1728,6 +1866,190 @@ function mapParishMatches(featureName,selectedParish){
  }
 
  return f===selected;
+}
+
+
+function googleMapsConfigured(){
+ const cfg=window.GOOGLE_MAPS_CONFIG||{};
+ return Boolean(
+   cfg.apiKey &&
+   !String(cfg.apiKey).includes("PEGAR_") &&
+   !String(cfg.apiKey).includes("TU_GOOGLE")
+ );
+}
+
+function loadGoogleMapsApi(){
+ if(window.google?.maps) return Promise.resolve(window.google.maps);
+ if(googleMapsLoadPromise) return googleMapsLoadPromise;
+
+ googleMapsLoadPromise=new Promise((resolve,reject)=>{
+   if(!googleMapsConfigured()){
+     reject(new Error("La API key de Google Maps todavía no está configurada."));
+     return;
+   }
+
+   const existing=document.querySelector('script[data-google-maps-loader="true"]');
+   if(existing){
+     const wait=()=>{
+       if(window.google?.maps) resolve(window.google.maps);
+       else setTimeout(wait,100);
+     };
+     wait();
+     return;
+   }
+
+   const callbackName="__gadmrGoogleMapsReady";
+   window[callbackName]=()=>{
+     try{delete window[callbackName];}catch(e){}
+     resolve(window.google.maps);
+   };
+
+   const script=document.createElement("script");
+   script.dataset.googleMapsLoader="true";
+   script.async=true;
+   script.defer=true;
+   script.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(window.GOOGLE_MAPS_CONFIG.apiKey)}&v=weekly&loading=async&callback=${callbackName}`;
+   script.onerror=()=>{
+     googleMapsLoadPromise=null;
+     reject(new Error("No se pudo cargar Google Maps JavaScript API."));
+   };
+   document.head.appendChild(script);
+ });
+
+ return googleMapsLoadPromise;
+}
+
+function closeStreetView(){
+ const modal=document.getElementById("streetViewModal");
+ modal?.classList.remove("open");
+ modal?.setAttribute("aria-hidden","true");
+
+ const container=document.getElementById("streetViewPanorama");
+ if(container) container.innerHTML="";
+ streetViewPanoramaInstance=null;
+ document.body.style.overflow="";
+}
+
+async function openStreetViewAt(lat,lng,projectName="Proyecto",locationLabel=""){
+ const modal=document.getElementById("streetViewModal");
+ const title=document.getElementById("streetViewTitle");
+ const meta=document.getElementById("streetViewMeta");
+ const status=document.getElementById("streetViewStatus");
+ const container=document.getElementById("streetViewPanorama");
+
+ if(!modal||!container||!status) return;
+
+ title.textContent=projectName||"Street View";
+ meta.textContent=locationLabel
+   ? `${locationLabel} · ${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`
+   : `${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`;
+
+ status.className="streetview-status";
+ status.textContent="Buscando cobertura de Street View cercana…";
+ status.style.display="block";
+ container.innerHTML="";
+
+ modal.classList.add("open");
+ modal.setAttribute("aria-hidden","false");
+ document.body.style.overflow="hidden";
+
+ try{
+   await loadGoogleMapsApi();
+
+   const streetLib=await google.maps.importLibrary("streetView");
+   const StreetViewService=streetLib.StreetViewService;
+   const StreetViewPanorama=streetLib.StreetViewPanorama;
+   const StreetViewSource=streetLib.StreetViewSource;
+
+   const service=new StreetViewService();
+
+   let response=null;
+   const radii=[50,100,250,500];
+
+   for(const radius of radii){
+     try{
+       response=await service.getPanorama({
+         location:{lat:Number(lat),lng:Number(lng)},
+         radius,
+         source:StreetViewSource.OUTDOOR
+       });
+       if(response?.data?.location?.pano) break;
+     }catch(err){
+       response=null;
+     }
+   }
+
+   if(!response?.data?.location?.pano){
+     throw new Error("No se encontró cobertura de Street View cerca de este proyecto.");
+   }
+
+   status.style.display="none";
+
+   streetViewPanoramaInstance=new StreetViewPanorama(container,{
+     pano:response.data.location.pano,
+     pov:{heading:0,pitch:0},
+     zoom:1,
+     addressControl:true,
+     linksControl:true,
+     panControl:true,
+     enableCloseButton:false,
+     fullscreenControl:true,
+     motionTracking:false
+   });
+
+   const panoLatLng=response.data.location.latLng;
+   if(panoLatLng){
+     meta.textContent=`Panorama cercano · ${panoLatLng.lat().toFixed(6)}, ${panoLatLng.lng().toFixed(6)}`;
+   }
+ }catch(err){
+   console.error("Street View:",err);
+   status.className="streetview-status error";
+   status.textContent=err.message||"No se pudo abrir Street View.";
+ }
+}
+
+function findProjectRowById(projectId){
+ return matrixRows.find(r=>String(r.id)===String(projectId))||null;
+}
+
+function openStreetViewForProject(projectId,locationIndex=0){
+ const row=findProjectRowById(projectId);
+ if(!row){
+   alert("No se encontró el proyecto.");
+   return;
+ }
+
+ const p=dbRowToProject(row);
+ const locations=projectLocations(p);
+ if(!locations.length){
+   alert("Este proyecto no tiene coordenadas registradas.");
+   return;
+ }
+
+ const index=Math.max(0,Math.min(Number(locationIndex)||0,locations.length-1));
+ const loc=locations[index];
+
+ openStreetViewAt(
+   loc.lat,
+   loc.lng,
+   p.proyecto||"Proyecto",
+   locations.length>1 ? (loc.label||`Ubicación ${index+1}`) : ""
+ );
+}
+
+function wireStreetViewButtons(root=document){
+ root.querySelectorAll?.("[data-streetview-project]").forEach(btn=>{
+   if(btn.dataset.streetviewBound==="true") return;
+   btn.dataset.streetviewBound="true";
+   btn.addEventListener("click",e=>{
+     e.preventDefault();
+     e.stopPropagation();
+     openStreetViewForProject(
+       btn.dataset.streetviewProject,
+       Number(btn.dataset.streetviewLocation||0)
+     );
+   });
+ });
 }
 
 function dashboardProjects(){
@@ -2655,13 +2977,19 @@ async function renderProjectMap(){
          <span><b>Monto:</b> ${esc(p.monto||"—")}</span><br>
          <span><b>Avance:</b> ${esc(p.avance||"—")}</span><br>
          <span><b>Área de intervención:</b> ${esc(p.area_intervencion||"—")}</span>
+         <div class="popup-streetview-wrap">
+           <button class="streetview-btn" type="button"
+             data-streetview-project="${esc(p.project_id)}"
+             data-streetview-location="0">◉ Street View</button>
+         </div>
        </div>`;
 
-     new maplibregl.Popup({closeButton:true,offset:12})
+     const projectPopup=new maplibregl.Popup({closeButton:true,offset:12})
        .setLngLat(f.geometry.coordinates)
        .setHTML(htmlPopup)
        .addTo(map);
 
+     setTimeout(()=>wireStreetViewButtons(projectPopup.getElement()),0);
      renderMapMediaPanel(p,media);
    });
 
@@ -2745,8 +3073,11 @@ function openModal(item){
  ${detail("Coordenada X",p["Coordenadas X"])}
  ${detail("Coordenada Y",p["Coordenadas Y"])}
  ${detail("Responsables",p.responsables,true)}
- ${detail("Descripción / estado registrado",p.estado_original,true)}</div>`;
+ ${detail("Descripción / estado registrado",p.estado_original,true)}
+ ${projectLocations(p).length?`<div class="detail full" style="background:#fff;padding-left:0"><button class="streetview-btn" type="button" data-streetview-project="${esc(p.id)}">◉ Abrir Street View</button></div>`:""}
+ </div>`;
  els.modal.classList.add("open");els.modal.setAttribute("aria-hidden","false");document.body.style.overflow="hidden";
+ setTimeout(()=>wireStreetViewButtons(els.modalContent),0);
 }
 function closeModal(){els.modal.classList.remove("open");els.modal.setAttribute("aria-hidden","true");document.body.style.overflow="";}
 function resetPageAndRender(){currentPage=1;renderTable();}
@@ -2761,6 +3092,7 @@ function bind(){
    if(e.key==="Escape"){
      closeModal();
      closeParishModal();
+     closeStreetView();
    }
  });
 }
@@ -3755,11 +4087,18 @@ async function showFocusedProjectPopup(row,loc){
    <span><b>Estado:</b> ${esc(groupedStatus(p))}</span><br>
    <span><b>Monto:</b> ${esc(amount(p)>0?moneyValue(amount(p)):"—")}</span><br>
    <span><b>Área de intervención:</b> ${esc(p["Área de Intervención"]||"—")}</span>
+   <div class="popup-streetview-wrap">
+     <button class="streetview-btn" type="button"
+       data-streetview-project="${esc(row.id)}"
+       data-streetview-location="0">◉ Street View</button>
+   </div>
  </div>`;
- new maplibregl.Popup({closeButton:true,offset:12})
+ const focusedPopup=new maplibregl.Popup({closeButton:true,offset:12})
    .setLngLat([loc.lng,loc.lat])
    .setHTML(htmlPopup)
    .addTo(projectMapInstance);
+
+ setTimeout(()=>wireStreetViewButtons(focusedPopup.getElement()),0);
 
  renderMapMediaPanel({
    proyecto:p.proyecto,
@@ -3805,6 +4144,7 @@ function renderMatrix(){
      <td class="matrix-actions-cell">
        <button class="row-action detail" type="button" data-detail-item="${r.item}">◉ Ver detalle</button>
        <button class="row-action map" type="button" data-map-id="${r.id}" ${hasMap?"":"disabled"}>⌖ Ver en mapa</button>
+       <button class="row-action" type="button" data-streetview-project="${r.id}" ${hasMap?"":"disabled"}>◉ Street View</button>
        <button class="row-action edit" type="button" data-edit-id="${r.id}">✎ Editar</button>
        <button class="row-action delete" type="button" data-delete-id="${r.id}">🗑 Eliminar</button>
      </td>
@@ -3817,7 +4157,8 @@ function renderMatrix(){
  tbody.querySelectorAll("[data-map-id]").forEach(btn=>{
    btn.addEventListener("click",()=>focusProjectOnMap(btn.dataset.mapId));
  });
- tbody.querySelectorAll("[data-edit-id]").forEach(btn=>{
+ wireStreetViewButtons(tbody);
+  tbody.querySelectorAll("[data-edit-id]").forEach(btn=>{
    btn.addEventListener("click",()=>{
      const row=matrixRows.find(r=>String(r.id)===String(btn.dataset.editId));
      if(row) openCrud(row);
@@ -3926,6 +4267,11 @@ function bindAdminUI(){
    }
  });
 
+ document.getElementById("streetViewClose")?.addEventListener("click",closeStreetView);
+ document.getElementById("streetViewModal")?.addEventListener("click",e=>{
+   if(e.target.dataset.streetviewClose) closeStreetView();
+ });
+
  document.getElementById("dashboardParishFilter")?.addEventListener("change",applyDashboardParishFilter);
  document.getElementById("toggleParishesLayer")?.addEventListener("change",applyMapLayerVisibility);
  document.getElementById("togglePlatformsLayer")?.addEventListener("change",applyMapLayerVisibility);
@@ -4011,6 +4357,7 @@ function bindAdminUI(){
      closeCrud();
      hideAuthPrompt();
      closeMediaViewer();
+     closeStreetView();
    }
  });
 
@@ -4070,6 +4417,27 @@ init().catch(err=>{
  }
 });
 </script>
+
+
+<div id="streetViewModal" class="streetview-modal" aria-hidden="true">
+  <div class="streetview-backdrop" data-streetview-close="true"></div>
+  <section class="streetview-dialog" role="dialog" aria-modal="true" aria-labelledby="streetViewTitle">
+    <div class="streetview-head">
+      <div class="streetview-head-copy">
+        <strong id="streetViewTitle">Street View</strong>
+        <span id="streetViewMeta">Buscando panorama disponible…</span>
+      </div>
+      <button id="streetViewClose" class="streetview-close" type="button" aria-label="Cerrar Street View">×</button>
+    </div>
+    <div class="streetview-body">
+      <div id="streetViewPanorama"></div>
+      <div id="streetViewStatus" class="streetview-status">Cargando Google Street View…</div>
+    </div>
+    <div class="streetview-footer">
+      Street View se abre en el panorama disponible más cercano a las coordenadas registradas del proyecto.
+    </div>
+  </section>
+</div>
 
 <div id="crudModal" class="crud-modal" aria-hidden="true">
   <div class="crud-backdrop" data-crud-close="true"></div>
