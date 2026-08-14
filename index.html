@@ -1364,6 +1364,11 @@
       font-size:10px !important;
     }
 
+    /* V24.4: el estado apagado debe prevalecer sobre display:grid !important */
+    .platform-map-label.platform-label-hidden{
+      display:none !important;
+    }
+
   
     /* V24.1 - Corrección de lista residual al volver a Todas las parroquias */
     .parish-project-list[hidden]{
@@ -2276,7 +2281,7 @@ function applyMapLayerVisibility(){
  platformLabelMarkers.forEach(({marker})=>{
    const el=marker?.getElement?.();
    if(!el) return;
-   el.style.display=platformsVisible ? "grid" : "none";
+   el.classList.toggle("platform-label-hidden",!platformsVisible);
  });
 }
 
@@ -2570,7 +2575,7 @@ async function renderProjectMap(){
        platformLabelMarkers.push({marker,name});
 
        const platformsVisibleNow=document.getElementById("togglePlatformsLayer")?.checked!==false;
-       marker.getElement().style.display=platformsVisibleNow?"grid":"none";
+       marker.getElement().classList.toggle("platform-label-hidden",!platformsVisibleNow);
      });
 
      map.addSource("proyectos",{type:"geojson",data:projectGeo});
