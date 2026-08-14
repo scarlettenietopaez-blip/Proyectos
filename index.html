@@ -1513,6 +1513,55 @@
       #streetViewPanorama{min-height:320px}
     }
 
+  
+    /* =========================================================
+       V26 - MULTIMEDIA: VIDEO PRIMERO + APERTURA DIRECTA
+       ========================================================= */
+    .map-media-list-item video{
+      width:100%;
+      height:150px;
+      display:block;
+      object-fit:cover;
+      background:#000;
+      pointer-events:none;
+    }
+    .map-media-list-item img{
+      height:150px;
+    }
+    .map-media-list-item{
+      min-height:100px;
+    }
+    .map-media-list-item::after{
+      content:"Abrir";
+      position:absolute;
+      left:50%;
+      bottom:8px;
+      transform:translateX(-50%);
+      padding:4px 8px;
+      border-radius:5px;
+      background:rgba(13,42,91,.88);
+      color:#fff;
+      font-size:8px;
+      font-weight:800;
+      opacity:0;
+      transition:opacity .15s ease;
+      pointer-events:none;
+    }
+    .map-media-list-item:hover::after{opacity:1}
+    .map-media-video-badge{
+      position:absolute;
+      left:7px;
+      bottom:7px;
+      z-index:2;
+      padding:4px 7px;
+      border-radius:5px;
+      background:rgba(185,28,28,.88);
+      color:#fff;
+      font-size:8px;
+      font-weight:900;
+      pointer-events:none;
+    }
+
   </style>
 </head>
 <body class="sidebar-collapsed">
@@ -1619,10 +1668,10 @@
               <span id="mapMediaProjectMeta">Selecciona un proyecto en el mapa</span>
             </div>
             <button id="mapMediaPanelClose" class="map-media-panel-close" type="button" aria-label="Cerrar panel">×</button>
-            <button id="mapMediaOpenTop" class="map-media-open-top" type="button" disabled>Abrir imágenes</button>
+            <button id="mapMediaOpenTop" class="map-media-open-top" type="button" disabled>Abrir archivo seleccionado</button>
           </div>
           <div id="mapMediaPanelBody" class="map-media-panel-body"></div>
-          <div class="map-media-panel-note">Selecciona un archivo de la lista y usa “Abrir imágenes” para visualizarlo en pantalla completa.</div>
+          <div class="map-media-panel-note">Haz clic en cualquier imagen o video para abrirlo en pantalla completa. Usa las flechas para navegar entre todos los archivos.</div>
         </aside>
       </div>
     </section>
@@ -3418,7 +3467,14 @@ async function getProjectMedia(projectId){
    console.warn("project_media:",error);
    return [];
  }
- return data||[];
+ const priority={video:0,image:1,pdf:2,tour360:3};
+ const sorted=(data||[]).slice().sort((a,b)=>{
+   const pa=priority[a.media_type]??9;
+   const pb=priority[b.media_type]??9;
+   if(pa!==pb) return pa-pb;
+   return String(a.created_at||"").localeCompare(String(b.created_at||""));
+ });
+ return sorted;
 }
 
 function mediaIcon(type){
@@ -3467,6 +3523,13 @@ function renderMapMediaPanel(projectProps,media){
 
  panel.classList.add("open");
  panel.setAttribute("aria-hidden","false");
+
+ setTimeout(()=>{
+   panel.querySelectorAll("video").forEach(video=>{
+     video.muted=true;
+     video.play().catch(()=>{});
+   });
+ },50);
 }
 
 function renderMapMediaList(){
@@ -3475,9 +3538,16 @@ function renderMapMediaList(){
 
  list.innerHTML=mapMediaCarouselItems.map((m,i)=>{
    const url=mediaPublicUrl(m.storage_path);
-   const preview=m.media_type==="image"
-     ? `<img src="${esc(url)}" alt="${esc(m.title||m.file_name||"Imagen")}">`
-     : `<div class="map-media-file-placeholder">${esc(mediaIcon(m.media_type))}</div>`;
+
+   let preview="";
+   if(m.media_type==="video"){
+     preview=`<video src="${esc(url)}" autoplay muted loop playsinline preload="metadata"></video>
+              <span class="map-media-video-badge">▶ VIDEO</span>`;
+   }else if(m.media_type==="image"){
+     preview=`<img src="${esc(url)}" alt="${esc(m.title||m.file_name||"Imagen")}">`;
+   }else{
+     preview=`<div class="map-media-file-placeholder">${esc(mediaIcon(m.media_type))}</div>`;
+   }
 
    return `<button class="map-media-list-item ${i===mapMediaCarouselIndex?"active":""}"
             type="button"
@@ -3492,11 +3562,17 @@ function renderMapMediaList(){
  list.querySelectorAll("[data-media-index]").forEach(btn=>{
    btn.addEventListener("click",()=>{
      mapMediaCarouselIndex=Number(btn.dataset.mediaIndex);
-     renderMapMediaList();
-
-     const active=btn;
-     active?.scrollIntoView({block:"nearest",behavior:"smooth"});
+     const record=mapMediaCarouselItems[mapMediaCarouselIndex];
+     if(record){
+       openMediaViewer(record,mapMediaCarouselItems,mapMediaCarouselIndex);
+     }
    });
+ });
+
+ // Forzar reproducción de previews cuando el navegador la permita.
+ list.querySelectorAll("video").forEach(video=>{
+   video.muted=true;
+   video.play().catch(()=>{});
  });
 }
 
@@ -3616,7 +3692,7 @@ function renderMediaViewerSlide(){
  }else if(record.media_type==="pdf"){
    body.innerHTML=`<iframe src="${esc(url)}" title="${esc(record.title||"PDF")}"></iframe>`;
  }else if(record.media_type==="video"){
-   body.innerHTML=`<video src="${esc(url)}" controls autoplay playsinline></video>`;
+   body.innerHTML=`<video src="${esc(url)}" controls autoplay playsinline preload="auto"></video>`;
  }else if(record.media_type==="tour360"){
    body.innerHTML='<div id="panorama360"></div>';
    if(window.pannellum){
