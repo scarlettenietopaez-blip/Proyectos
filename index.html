@@ -7,7 +7,7 @@
   <title>Seguimiento de Proyectos | GADM Riobamba</title>
   <link rel="icon" type="image/png" href="./assets/favicon.png">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./supabase-config.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.7/build/pannellum.css">
@@ -1315,9 +1315,58 @@
       border-top-color:#fff;
     }
 
+  
+    /* V24 - Sidebar compacto por defecto */
+    body.sidebar-collapsed .side-tab{position:relative}
+    body.sidebar-collapsed .side-tab:hover::after{
+      content:attr(aria-label);
+      position:absolute;
+      left:54px;
+      top:50%;
+      transform:translateY(-50%);
+      z-index:1300;
+      padding:6px 8px;
+      border-radius:5px;
+      background:#fff;
+      color:#0d2a5b;
+      border:1px solid #d8e0eb;
+      box-shadow:0 5px 14px rgba(13,42,91,.16);
+      font-size:9px;
+      font-weight:800;
+      white-space:nowrap;
+    }
+
+  
+    .chart-axis-label-tooltip{
+      display:none;
+      position:absolute;
+      z-index:20;
+      max-width:330px;
+      padding:7px 9px;
+      border-radius:6px;
+      background:#0d2a5b;
+      color:#fff;
+      font-size:9px;
+      font-weight:700;
+      line-height:1.3;
+      pointer-events:none;
+      box-shadow:0 5px 16px rgba(13,42,91,.24);
+    }
+
+  
+    .platform-map-label{
+      min-width:22px !important;
+      height:22px !important;
+      padding:0 5px !important;
+      display:grid !important;
+      place-items:center !important;
+      border-radius:12px !important;
+      font-size:10px !important;
+    }
+
   </style>
 </head>
-<body>
+<body class="sidebar-collapsed">
 
   <aside class="admin-sidebar" id="adminSidebar" aria-label="Panel de navegación">
     <div class="sidebar-head">
@@ -1742,6 +1791,56 @@ function renderParishProjectList(data,parish){
    : '<div class="db-message">No existen proyectos registrados para esta parroquia.</div>';
 }
 
+
+function attachYAxisLabelTooltip(chart,fullLabels){
+ const canvas=chart?.canvas;
+ if(!canvas) return;
+
+ const parent=canvas.parentElement;
+ if(!parent) return;
+ parent.style.position="relative";
+
+ parent.querySelector(".chart-axis-label-tooltip")?.remove();
+ const tooltip=document.createElement("div");
+ tooltip.className="chart-axis-label-tooltip";
+ parent.appendChild(tooltip);
+
+ const hide=()=>{tooltip.style.display="none";};
+
+ canvas.addEventListener("mouseleave",hide);
+ canvas.addEventListener("mousemove",e=>{
+   if(!chart.scales?.y || !chart.chartArea) return;
+
+   const rect=canvas.getBoundingClientRect();
+   const x=e.clientX-rect.left;
+   const y=e.clientY-rect.top;
+
+   // Solo actuar en el área de las etiquetas del eje Y.
+   if(x>=chart.chartArea.left || x<0){
+     hide();
+     return;
+   }
+
+   let nearest=-1;
+   let dist=Infinity;
+   fullLabels.forEach((_,i)=>{
+     const py=chart.scales.y.getPixelForTick(i);
+     const d=Math.abs(py-y);
+     if(d<dist){dist=d;nearest=i;}
+   });
+
+   if(nearest<0 || dist>18){
+     hide();
+     return;
+   }
+
+   tooltip.textContent=fullLabels[nearest]||"";
+   tooltip.style.display="block";
+   tooltip.style.left=`${Math.max(8,x+12)}px`;
+   tooltip.style.top=`${Math.max(6,y-10)}px`;
+ });
+}
+
 function renderCharts(){
  Chart.defaults.font.family='Arial, "Helvetica Neue", sans-serif';
  Chart.defaults.color="#344054";
@@ -1922,13 +2021,17 @@ function renderCharts(){
         autoSkip:false,
         callback:function(value){
           const label=this.getLabelForValue(value);
-          return selectedParish && label.length>34 ? label.slice(0,34)+"…" : label;
+          return selectedParish && label.length>24 ? label.slice(0,24)+"…" : label;
         }
       }
     }
    }
   }
  });
+
+ if(selectedParish){
+   attachYAxisLabelTooltip(parishMoneyChart,labels);
+ }
 }
 
 function openParishInvestmentModal(parish){
@@ -2376,7 +2479,13 @@ async function renderProjectMap(){
 
        const el=document.createElement("div");
        el.className="platform-map-label";
-       el.textContent=name;
+       const platformLetter=name
+         .replace(/^PLATAFORMA\s+/i,"")
+         .trim()
+         .charAt(0)
+         .toUpperCase() || name.charAt(0).toUpperCase();
+       el.textContent=platformLetter;
+       el.title=name;
        el.style.zIndex="30";
 
        const marker=new maplibregl.Marker({
@@ -3314,45 +3423,187 @@ function matrixFilteredRows(){
 }
 
 
-function downloadMatrixXlsx(){
- if(typeof XLSX==="undefined"){
-   alert("No se pudo cargar el componente de exportación XLSX.");
+async function downloadMatrixXlsx(){
+ if(typeof ExcelJS==="undefined"){
+   alert("No se pudo cargar el componente de exportación Excel.");
    return;
  }
 
- const rows=matrixRows
-   .slice()
-   .sort((a,b)=>(Number(a.item)||0)-(Number(b.item)||0))
-   .map(r=>({
-     "N°":r.item??"",
-     "Categoría":r.categoria||"",
-     "Parroquia":r.parroquia||"",
-     "Proyecto":r.proyecto||"",
-     "Monto (USD)":r.monto==null?"":Number(r.monto),
-     "Trámite":r.tramite||"",
-     "Responsables":r.responsables||"",
-     "Descripción / Estado original":r.estado_original||"",
-     "Estado Dashboard":r.estado_dashboard||"",
-     "Fecha prevista / entrega":r.fecha_entrega||"",
-     "Cronograma contractual":r.cronograma_contractual||"",
-     "Avance (%)":progressPercent(r.avance)??"",
-     "Coordenadas X":r.coordenadas_x||"",
-     "Coordenadas Y":r.coordenadas_y||"",
-     "Área de Intervención":r.area_intervencion||""
-   }));
+ const btn=document.getElementById("downloadMatrixXlsx");
+ const oldText=btn?.textContent;
+ if(btn){
+   btn.disabled=true;
+   btn.textContent="Generando Excel…";
+ }
 
- const ws=XLSX.utils.json_to_sheet(rows);
- ws["!cols"]=[
-   {wch:7},{wch:16},{wch:16},{wch:52},{wch:16},{wch:20},{wch:28},
-   {wch:50},{wch:28},{wch:24},{wch:32},{wch:12},{wch:24},{wch:24},{wch:24}
- ];
+ try{
+   const workbook=new ExcelJS.Workbook();
+   workbook.creator="GADM Riobamba · Jefatura de Diseño de la Obra Pública";
+   workbook.created=new Date();
 
- const wb=XLSX.utils.book_new();
- XLSX.utils.book_append_sheet(wb,ws,"Matriz de Proyectos");
+   const ws=workbook.addWorksheet("Registro Proyectos",{
+     views:[{state:"frozen",ySplit:1}]
+   });
 
- const date=new Date();
- const stamp=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
- XLSX.writeFile(wb,`Matriz_Proyectos_GADMR_${stamp}.xlsx`);
+   const columns=[
+     {header:"item",key:"item",width:7},
+     {header:"categoria",key:"categoria",width:14},
+     {header:"parroquia",key:"parroquia",width:16},
+     {header:"proyecto",key:"proyecto",width:39},
+     {header:"monto",key:"monto",width:16},
+     {header:"tramite",key:"tramite",width:24},
+     {header:"responsables",key:"responsables",width:28},
+     {header:"estado_original",key:"estado_original",width:34},
+     {header:"estado_dashboard",key:"estado_dashboard",width:27},
+     {header:"fecha_entrega",key:"fecha_entrega",width:22},
+     {header:"cronograma_contractual",key:"cronograma_contractual",width:24},
+     {header:"Avance",key:"avance",width:12},
+     {header:"Coordenadas X",key:"coordenadas_x",width:22},
+     {header:"Coordenadas Y",key:"coordenadas_y",width:22},
+     {header:"Área de Intervención",key:"area_intervencion",width:22}
+   ];
+   ws.columns=columns;
+
+   const rows=matrixRows
+     .slice()
+     .sort((a,b)=>(Number(a.item)||0)-(Number(b.item)||0));
+
+   rows.forEach(r=>{
+     ws.addRow({
+       item:r.item??"",
+       categoria:r.categoria||"",
+       parroquia:r.parroquia||"",
+       proyecto:r.proyecto||"",
+       monto:r.monto==null?null:Number(r.monto),
+       tramite:r.tramite||"",
+       responsables:r.responsables||"",
+       estado_original:r.estado_original||"",
+       estado_dashboard:r.estado_dashboard||"",
+       fecha_entrega:r.fecha_entrega||"",
+       cronograma_contractual:r.cronograma_contractual||"",
+       avance:r.avance==null?null:progressDbValue(r.avance),
+       coordenadas_x:r.coordenadas_x||"",
+       coordenadas_y:r.coordenadas_y||"",
+       area_intervencion:r.area_intervencion||""
+     });
+   });
+
+   // Encabezado basado en la matriz oficial entregada.
+   const header=ws.getRow(1);
+   header.height=24;
+   header.eachCell(cell=>{
+     cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF0D2A5B"}};
+     cell.font={name:"Arial",size:10,bold:true,color:{argb:"FFFFFFFF"}};
+     cell.alignment={horizontal:"center",vertical:"middle",wrapText:true};
+     cell.border={
+       top:{style:"thin",color:{argb:"FF6FAFD3"}},
+       left:{style:"thin",color:{argb:"FF6FAFD3"}},
+       bottom:{style:"thin",color:{argb:"FF6FAFD3"}},
+       right:{style:"thin",color:{argb:"FF6FAFD3"}}
+     };
+   });
+
+   // Filas alternadas celeste/blanco como el registro oficial.
+   ws.eachRow((row,rowNumber)=>{
+     if(rowNumber===1) return;
+
+     const status=String(row.getCell(9).value||"");
+     const isNotStarted=status.toLowerCase()==="no iniciado";
+
+     let fillColor;
+     if(isNotStarted){
+       fillColor="FFFFFF00";
+     }else{
+       fillColor=(rowNumber%2===0) ? "FFBFE3F2" : "FFFFFFFF";
+     }
+
+     row.height=62;
+
+     row.eachCell({includeEmpty:true},cell=>{
+       cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:fillColor}};
+       cell.font={name:"Arial",size:9,color:{argb:"FF111827"}};
+       cell.alignment={
+         vertical:"top",
+         horizontal:"left",
+         wrapText:true
+       };
+       cell.border={
+         top:{style:"thin",color:{argb:"FF79C7E5"}},
+         left:{style:"thin",color:{argb:"FFD8E6EF"}},
+         bottom:{style:"thin",color:{argb:"FF79C7E5"}},
+         right:{style:"thin",color:{argb:"FFD8E6EF"}}
+       };
+     });
+
+     row.getCell(1).alignment={horizontal:"right",vertical:"top"};
+     row.getCell(3).alignment={horizontal:"center",vertical:"top",wrapText:true};
+     row.getCell(5).alignment={horizontal:"right",vertical:"top"};
+     row.getCell(12).alignment={horizontal:"right",vertical:"top"};
+     row.getCell(13).alignment={horizontal:"center",vertical:"middle",wrapText:true};
+     row.getCell(14).alignment={horizontal:"center",vertical:"middle",wrapText:true};
+     row.getCell(15).alignment={horizontal:"center",vertical:"middle",wrapText:true};
+   });
+
+   // Formatos numéricos.
+   ws.getColumn(5).numFmt='$#,##0.00';
+   ws.getColumn(12).numFmt='0%';
+
+   // Filtros, tal como una matriz de registro.
+   ws.autoFilter={
+     from:{row:1,column:1},
+     to:{row:rows.length+1,column:15}
+   };
+
+   // Validaciones de los campos normalizados.
+   for(let row=2;row<=rows.length+1;row++){
+     ws.getCell(`B${row}`).dataValidation={
+       type:"list",
+       allowBlank:true,
+       formulae:['"PAC,Fuera del PAC"']
+     };
+     ws.getCell(`I${row}`).dataValidation={
+       type:"list",
+       allowBlank:true,
+       formulae:['"En desarrollo,Entregado para Contratación,Remitido a otra dirección,No iniciado"']
+     };
+   }
+
+   // Resaltar la separación antes de Avance, como la matriz de referencia.
+   for(let row=1;row<=rows.length+1;row++){
+     ws.getCell(`L${row}`).border={
+       ...ws.getCell(`L${row}`).border,
+       left:{style:"medium",color:{argb:"FFD85AD8"}}
+     };
+   }
+
+   // Ocultar cuadrícula visual para una presentación más limpia.
+   ws.views=[{state:"frozen",ySplit:1,showGridLines:false}];
+
+   const buffer=await workbook.xlsx.writeBuffer();
+   const blob=new Blob(
+     [buffer],
+     {type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}
+   );
+
+   const date=new Date();
+   const stamp=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+   const url=URL.createObjectURL(blob);
+   const a=document.createElement("a");
+   a.href=url;
+   a.download=`Matriz_Proyectos_GADMR_${stamp}.xlsx`;
+   document.body.appendChild(a);
+   a.click();
+   a.remove();
+   setTimeout(()=>URL.revokeObjectURL(url),1500);
+ }catch(err){
+   console.error("Exportación XLSX:",err);
+   alert(`No se pudo generar el Excel: ${err.message||err}`);
+ }finally{
+   if(btn){
+     btn.disabled=false;
+     btn.textContent=oldText||"⇩ Descargar Matriz (.xlsx)";
+   }
+ }
 }
 
 function fillMatrixParishes(){
@@ -3574,7 +3825,17 @@ function selectView(viewId){
 
 function bindAdminUI(){
  document.querySelectorAll(".side-tab").forEach(btn=>{
-   btn.addEventListener("click",()=>selectView(btn.dataset.view));
+   btn.addEventListener("click",()=>{
+     selectView(btn.dataset.view);
+
+     // Después de seleccionar una vista, el panel vuelve a minimizarse
+     // automáticamente para liberar espacio.
+     if(window.innerWidth<=900){
+       document.body.classList.remove("sidebar-mobile-open");
+     }else{
+       document.body.classList.add("sidebar-collapsed");
+     }
+   });
  });
 
  document.getElementById("sidebarToggle")?.addEventListener("click",()=>{
