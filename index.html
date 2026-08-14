@@ -1289,6 +1289,32 @@
       box-shadow:0 1px 4px rgba(91,33,182,.12);
     }
 
+  
+    /* V23 - títulos de plataformas siempre legibles */
+    .platform-map-label{
+      z-index:30 !important;
+      color:#4c1d95 !important;
+      background:rgba(255,255,255,.96) !important;
+      border:1px solid rgba(91,33,182,.38) !important;
+      padding:4px 7px !important;
+      font-size:9px !important;
+      font-weight:900 !important;
+      box-shadow:0 2px 6px rgba(76,29,149,.18) !important;
+    }
+
+  
+    .project-hover-popup .maplibregl-popup-content{
+      padding:7px 9px;
+      border-radius:6px;
+      color:#0d2a5b;
+      font-size:9px;
+      line-height:1.25;
+      box-shadow:0 5px 16px rgba(13,42,91,.18);
+    }
+    .project-hover-popup .maplibregl-popup-tip{
+      border-top-color:#fff;
+    }
+
   </style>
 </head>
 <body>
@@ -1605,8 +1631,10 @@ function normalizedParishName(value){
  return String(value||"").trim().toUpperCase().replace(/\s+/g," ");
 }
 function dashboardProjects(){
- const parish=document.getElementById("dashboardParishFilter")?.value||"";
- return parish ? projects.filter(p=>normalizedParishName(p.parroquia)===normalizedParishName(parish)) : projects;
+ const parish=currentDashboardParish || document.getElementById("dashboardParishFilter")?.value || "";
+ return parish
+   ? projects.filter(p=>normalizedParishName(p.parroquia)===normalizedParishName(parish))
+   : projects;
 }
 
 function moneyValue(n){return new Intl.NumberFormat("es-EC",{style:"currency",currency:"USD",minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);}
@@ -1719,8 +1747,10 @@ function renderCharts(){
  Chart.defaults.color="#344054";
  Chart.defaults.font.size=10;
 
- const data=dashboardProjects();
- const selectedParish=document.getElementById("dashboardParishFilter")?.value||"";
+ const selectedParish=currentDashboardParish || document.getElementById("dashboardParishFilter")?.value || "";
+ const data=selectedParish
+   ? projects.filter(p=>normalizedParishName(p.parroquia)===normalizedParishName(selectedParish))
+   : projects;
 
  const order=["En desarrollo","Entregado para Contratación","Remitido a otra dirección","No iniciado"];
  const sc=Object.fromEntries(order.map(s=>[s,0]));
@@ -1754,8 +1784,6 @@ function renderCharts(){
   }
  });
 
- // Si hay una parroquia seleccionada, este panel deja de ser un gráfico
- // y pasa a mostrar la lista de proyectos con su estado.
  renderParishProjectList(data,selectedParish);
 
  if(!selectedParish){
@@ -1802,24 +1830,34 @@ function renderCharts(){
  const moneyTitle=document.getElementById("moneyChartTitle");
  const moneyNote=document.querySelector("#moneyChartTitle + .chart-note");
 
- let moneyLabels=[],moneyValues=[],moneyProjects=[];
+ let labels=[];
+ let values=[];
+ let projectRefs=[];
 
  if(selectedParish){
-   const list=data.slice().sort((a,b)=>amount(b)-amount(a));
-   moneyLabels=list.map(p=>p.proyecto||"Proyecto");
-   moneyValues=list.map(p=>amount(p));
-   moneyProjects=list;
+   // Cada barra representa UN proyecto, no el total de la parroquia.
+   projectRefs=data
+     .slice()
+     .sort((a,b)=>amount(b)-amount(a));
+
+   labels=projectRefs.map((p,i)=>{
+     const name=String(p.proyecto||`Proyecto ${i+1}`).trim();
+     return name;
+   });
+   values=projectRefs.map(p=>amount(p));
+
    if(moneyTitle) moneyTitle.textContent=`MONTO DE INVERSIÓN POR PROYECTO · ${selectedParish}`;
-   if(moneyNote) moneyNote.textContent="Haz clic en una barra para ver el detalle del proyecto.";
+   if(moneyNote) moneyNote.textContent="Cada barra corresponde a un proyecto. Haz clic para ver su detalle.";
  }else{
-   const pm={};
+   const totals={};
    data.forEach(p=>{
      const k=p.parroquia||"Sin información";
-     pm[k]=(pm[k]||0)+amount(p);
+     totals[k]=(totals[k]||0)+amount(p);
    });
-   const pme=Object.entries(pm).sort((a,b)=>b[1]-a[1]);
-   moneyLabels=pme.map(x=>x[0]);
-   moneyValues=pme.map(x=>x[1]);
+   const entries=Object.entries(totals).sort((a,b)=>b[1]-a[1]);
+   labels=entries.map(x=>x[0]);
+   values=entries.map(x=>x[1]);
+
    if(moneyTitle) moneyTitle.textContent="MONTO DE INVERSIÓN POR PARROQUIA";
    if(moneyNote) moneyNote.textContent="Haz clic en una barra para ver el detalle.";
  }
@@ -1828,39 +1866,46 @@ function renderCharts(){
  parishMoneyChart=new Chart($("#parishMoneyChart"),{
   type:"bar",
   data:{
-    labels:moneyLabels,
+    labels,
     datasets:[{
       label:"Inversión",
-      data:moneyValues,
-      backgroundColor:moneyLabels.map((_,i)=>PALETTE[i%PALETTE.length]),
+      data:values,
+      backgroundColor:labels.map((_,i)=>PALETTE[i%PALETTE.length]),
       borderRadius:3,
-      barPercentage:.64
+      barPercentage:.65,
+      categoryPercentage:.82
     }]
   },
   options:{
    indexAxis:"y",
    responsive:true,
    maintainAspectRatio:false,
-   layout:{padding:{top:8,left:0,right:72,bottom:0}},
+   layout:{padding:{top:8,left:0,right:82,bottom:0}},
    onHover:(evt,elements)=>{evt.native.target.style.cursor=elements.length?"pointer":"default";},
    onClick:(evt,elements)=>{
      if(!elements.length)return;
      const idx=elements[0].index;
      if(selectedParish){
-       const p=moneyProjects[idx];
-       if(p) openModal(p.item);
+       const project=projectRefs[idx];
+       if(project) openModal(project.item);
      }else{
-       openParishInvestmentModal(moneyLabels[idx]);
+       openParishInvestmentModal(labels[idx]);
      }
    },
    plugins:{
     legend:{display:false},
-    valueLabels:{enabled:true,formatter:v=>moneyValue(v)},
+    valueLabels:{
+      enabled:true,
+      formatter:v=>moneyValue(v)
+    },
     tooltip:{
       callbacks:{
-        title:items=>selectedParish
-          ? (moneyProjects[items[0].dataIndex]?.proyecto||"Proyecto")
-          : items[0].label,
+        title:items=>{
+          if(selectedParish){
+            return projectRefs[items[0].dataIndex]?.proyecto||"Proyecto";
+          }
+          return items[0].label;
+        },
         label:c=>moneyValue(c.raw)
       }
     }
@@ -1877,7 +1922,7 @@ function renderCharts(){
         autoSkip:false,
         callback:function(value){
           const label=this.getLabelForValue(value);
-          return selectedParish && label.length>28 ? label.slice(0,28)+"…" : label;
+          return selectedParish && label.length>34 ? label.slice(0,34)+"…" : label;
         }
       }
     }
@@ -2070,15 +2115,8 @@ function applyMapLayerVisibility(){
 function updateMapForDashboardFilter(){
  if(!projectMapInstance || !projectMapReady || !currentParishGeo) return;
 
- const parish=document.getElementById("dashboardParishFilter")?.value||"";
+ const parish=currentDashboardParish || document.getElementById("dashboardParishFilter")?.value || "";
  currentDashboardParish=parish;
-
- const platformsToggle=document.getElementById("togglePlatformsLayer");
- if(platformsToggle){
-   // Al filtrar por parroquia, Plataformas se desactiva por defecto.
-   // El usuario puede volver a activarla manualmente.
-   if(parish) platformsToggle.checked=false;
- }
 
  const parishFilter=parish
    ? ["==",["get","dashboard_parish"],normalizedParishName(parish)]
@@ -2120,6 +2158,16 @@ function updateMapForDashboardFilter(){
 }
 
 function applyDashboardParishFilter(){
+ const select=document.getElementById("dashboardParishFilter");
+ currentDashboardParish=select?.value||"";
+
+ // Al aplicar un filtro parroquial, Plataformas inicia desactivada.
+ // Luego el usuario puede activarla manualmente si la necesita.
+ const platformsToggle=document.getElementById("togglePlatformsLayer");
+ if(platformsToggle && currentDashboardParish){
+   platformsToggle.checked=false;
+ }
+
  renderKpis();
  renderCharts();
  updateMapForDashboardFilter();
@@ -2236,30 +2284,6 @@ async function renderProjectMap(){
        }
      });
 
-     // Títulos permanentes de plataformas.
-     platformLabelMarkers.forEach(({marker})=>marker.remove());
-     platformLabelMarkers=[];
-
-     platformGeo.features.forEach(feature=>{
-       const props=feature.properties||{};
-       const name=String(props.Nombre||props.nombre||"Plataforma").trim();
-       if(!name) return;
-
-       const bounds=new maplibregl.LngLatBounds();
-       addCoordsToBounds(bounds,feature.geometry?.coordinates);
-       if(bounds.isEmpty()) return;
-
-       const el=document.createElement("div");
-       el.className="platform-map-label";
-       el.textContent=name;
-
-       const marker=new maplibregl.Marker({element:el,anchor:"center"})
-         .setLngLat(bounds.getCenter())
-         .addTo(map);
-
-       platformLabelMarkers.push({marker,name});
-     });
-
 
 
 
@@ -2337,6 +2361,34 @@ async function renderProjectMap(){
        parishLabelMarkers.push({marker,name:group.name});
      });
 
+     // Títulos permanentes de Plataformas.
+     platformLabelMarkers.forEach(({marker})=>marker.remove());
+     platformLabelMarkers=[];
+
+     platformGeo.features.forEach(feature=>{
+       const props=feature.properties||{};
+       const name=String(props.Nombre||props.nombre||"").trim();
+       if(!name) return;
+
+       const bounds=new maplibregl.LngLatBounds();
+       addCoordsToBounds(bounds,feature.geometry?.coordinates);
+       if(bounds.isEmpty()) return;
+
+       const el=document.createElement("div");
+       el.className="platform-map-label";
+       el.textContent=name;
+       el.style.zIndex="30";
+
+       const marker=new maplibregl.Marker({
+         element:el,
+         anchor:"center"
+       })
+       .setLngLat(bounds.getCenter())
+       .addTo(map);
+
+       platformLabelMarkers.push({marker,name});
+     });
+
      map.addSource("proyectos",{type:"geojson",data:projectGeo});
      map.addLayer({
        id:"proyectos-circle",
@@ -2390,10 +2442,9 @@ async function renderProjectMap(){
      if(!f) return;
      const props=f.properties||{};
      const name=props.Nombre||props.nombre||"Plataforma";
-     const area=Number(props.Area);
      new maplibregl.Popup({closeButton:true,offset:8})
        .setLngLat(e.lngLat)
-       .setHTML(`<strong>${esc(name)}</strong>${Number.isFinite(area)?`<br><span><b>Área:</b> ${area.toFixed(2)} m²</span>`:""}`)
+       .setHTML(`<strong>${esc(name)}</strong>`)
        .addTo(projectMapInstance);
    });
    map.on("mouseenter","plataformas-fill",()=>map.getCanvas().style.cursor="pointer");
@@ -2425,8 +2476,33 @@ async function renderProjectMap(){
      renderMapMediaPanel(p,media);
    });
 
-   map.on("mouseenter","proyectos-circle",()=>map.getCanvas().style.cursor="pointer");
-   map.on("mouseleave","proyectos-circle",()=>map.getCanvas().style.cursor="");
+   const projectHoverPopup=new maplibregl.Popup({
+     closeButton:false,
+     closeOnClick:false,
+     offset:11,
+     className:"project-hover-popup"
+   });
+
+   map.on("mouseenter","proyectos-circle",e=>{
+     map.getCanvas().style.cursor="pointer";
+     const f=e.features?.[0];
+     if(!f) return;
+     projectHoverPopup
+       .setLngLat(f.geometry.coordinates)
+       .setHTML(`<strong>${esc(f.properties?.proyecto||"Proyecto")}</strong>`)
+       .addTo(map);
+   });
+
+   map.on("mousemove","proyectos-circle",e=>{
+     const f=e.features?.[0];
+     if(!f) return;
+     projectHoverPopup.setLngLat(f.geometry.coordinates);
+   });
+
+   map.on("mouseleave","proyectos-circle",()=>{
+     map.getCanvas().style.cursor="";
+     projectHoverPopup.remove();
+   });
 
    map.on("error",e=>{
      console.warn("MapLibre:",e.error||e);
@@ -3617,6 +3693,7 @@ async function init(){
  const dashboardSelect=document.getElementById("dashboardParishFilter");
  if(dashboardSelect){
    fillSelect(dashboardSelect,unique("parroquia"));
+   currentDashboardParish=dashboardSelect.value||"";
  }
 
  if(els.parish){
