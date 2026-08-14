@@ -1688,10 +1688,47 @@ function formatProgress(value){
 function normalizedParishName(value){
  return String(value||"").trim().toUpperCase().replace(/\s+/g," ");
 }
+const RIOBAMBA_URBAN_PARISHES=[
+ "RIOBAMBA",
+ "VELASCO",
+ "LIZARZABURU",
+ "MALDONADO",
+ "YARUQUIES",
+ "VELOZ"
+];
+
+function dashboardParishMatches(projectParish,selectedParish){
+ const p=normalizedParishName(projectParish);
+ const selected=normalizedParishName(selectedParish);
+
+ if(!selected) return true;
+
+ // En el Dashboard, "RIOBAMBA" representa la cabecera urbana:
+ // Riobamba + sus cinco parroquias urbanas.
+ if(selected==="RIOBAMBA"){
+   return RIOBAMBA_URBAN_PARISHES.includes(p);
+ }
+
+ return p===selected;
+}
+
+function mapParishMatches(featureName,selectedParish){
+ const f=normalizedParishName(featureName);
+ const selected=normalizedParishName(selectedParish);
+
+ if(!selected) return true;
+
+ if(selected==="RIOBAMBA"){
+   return RIOBAMBA_URBAN_PARISHES.includes(f);
+ }
+
+ return f===selected;
+}
+
 function dashboardProjects(){
  const parish=currentDashboardParish || document.getElementById("dashboardParishFilter")?.value || "";
  return parish
-   ? projects.filter(p=>normalizedParishName(p.parroquia)===normalizedParishName(parish))
+   ? projects.filter(p=>dashboardParishMatches(p.parroquia,parish))
    : projects;
 }
 
@@ -1735,7 +1772,9 @@ function renderKpis(){
  if(summary){
    const parish=document.getElementById("dashboardParishFilter")?.value||"";
    summary.textContent=parish
-     ? `Mostrando ${total} proyecto${total===1?"":"s"} de ${parish}`
+     ? (normalizedParishName(parish)==="RIOBAMBA"
+         ? `Mostrando ${total} proyecto${total===1?"":"s"} de Riobamba y sus parroquias urbanas`
+         : `Mostrando ${total} proyecto${total===1?"":"s"} de ${parish}`)
      : `Mostrando ${total} proyectos de todas las parroquias`;
  }
 }
@@ -1861,7 +1900,7 @@ function renderCharts(){
 
  const selectedParish=currentDashboardParish || document.getElementById("dashboardParishFilter")?.value || "";
  const data=selectedParish
-   ? projects.filter(p=>normalizedParishName(p.parroquia)===normalizedParishName(selectedParish))
+   ? projects.filter(p=>dashboardParishMatches(p.parroquia,selectedParish))
    : projects;
 
  const order=["En desarrollo","Entregado para Contratación","Remitido a otra dirección","No iniciado"];
@@ -2204,6 +2243,7 @@ function parishFeatureName(feature){
 
 function applyMapLayerVisibility(){
  if(!projectMapInstance || !projectMapReady) return;
+
  const parishVisible=document.getElementById("toggleParishesLayer")?.checked!==false;
  const platformsVisible=document.getElementById("togglePlatformsLayer")?.checked!==false;
 
@@ -2212,19 +2252,31 @@ function applyMapLayerVisibility(){
      projectMapInstance.setLayoutProperty(id,"visibility",parishVisible?"visible":"none");
    }
  });
+
  ["plataformas-fill","plataformas-line"].forEach(id=>{
    if(projectMapInstance.getLayer(id)){
      projectMapInstance.setLayoutProperty(id,"visibility",platformsVisible?"visible":"none");
    }
  });
 
+ // Etiquetas parroquiales: siguen el check de Parroquias
+ // y además respetan el filtro parroquial activo.
  parishLabelMarkers.forEach(({marker,name})=>{
-   const matches=!currentDashboardParish || normalizedParishName(name)===normalizedParishName(currentDashboardParish);
-   marker.getElement().style.display=(parishVisible&&matches)?"":"none";
+   const el=marker?.getElement?.();
+   if(!el) return;
+
+   const matches=!currentDashboardParish ||
+     mapParishMatches(name,currentDashboardParish);
+
+   el.style.display=(parishVisible && matches) ? "grid" : "none";
  });
 
+ // Etiquetas de plataformas: deben encenderse/apagarse EXACTAMENTE
+ // junto con la capa Plataformas.
  platformLabelMarkers.forEach(({marker})=>{
-   marker.getElement().style.display=platformsVisible?"":"none";
+   const el=marker?.getElement?.();
+   if(!el) return;
+   el.style.display=platformsVisible ? "grid" : "none";
  });
 }
 
@@ -2234,11 +2286,18 @@ function updateMapForDashboardFilter(){
  const parish=currentDashboardParish || document.getElementById("dashboardParishFilter")?.value || "";
  currentDashboardParish=parish;
 
+ const normalizedSelected=normalizedParishName(parish);
+
  const parishFilter=parish
-   ? ["==",["get","dashboard_parish"],normalizedParishName(parish)]
+   ? (normalizedSelected==="RIOBAMBA"
+       ? ["in",["get","dashboard_parish"],["literal",RIOBAMBA_URBAN_PARISHES]]
+       : ["==",["get","dashboard_parish"],normalizedSelected])
    : null;
+
  const projectFilter=parish
-   ? ["==",["get","parroquia_norm"],normalizedParishName(parish)]
+   ? (normalizedSelected==="RIOBAMBA"
+       ? ["in",["get","parroquia_norm"],["literal",RIOBAMBA_URBAN_PARISHES]]
+       : ["==",["get","parroquia_norm"],normalizedSelected])
    : null;
 
  ["parroquias-fill","parroquias-line"].forEach(id=>{
@@ -2260,7 +2319,7 @@ function updateMapForDashboardFilter(){
  const bounds=new maplibregl.LngLatBounds();
  if(parish){
    currentParishGeo.features
-     .filter(f=>parishFeatureName(f)===normalizedParishName(parish))
+     .filter(f=>mapParishMatches(parishFeatureName(f),parish))
      .forEach(f=>addCoordsToBounds(bounds,f.geometry.coordinates));
  }else{
    currentParishGeo.features.forEach(f=>addCoordsToBounds(bounds,f.geometry.coordinates));
@@ -2509,6 +2568,9 @@ async function renderProjectMap(){
        .addTo(map);
 
        platformLabelMarkers.push({marker,name});
+
+       const platformsVisibleNow=document.getElementById("togglePlatformsLayer")?.checked!==false;
+       marker.getElement().style.display=platformsVisibleNow?"grid":"none";
      });
 
      map.addSource("proyectos",{type:"geojson",data:projectGeo});
