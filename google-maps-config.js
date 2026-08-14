@@ -7,5 +7,5 @@
 // No agregues service account, OAuth secret ni ninguna clave privada.
 
 window.GOOGLE_MAPS_CONFIG = {
-  apiKey: "PEGAR_AQUI_API_KEY"
+  apiKey: "AIzaSyDyGWzTPQciqHR964T3NyMfGkWNbtQjJrY"
 };
